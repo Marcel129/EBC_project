@@ -1,6 +1,7 @@
 # Event based control - project
 
 ## Informacje podstawowe
+Dokumentacja w overleaf: https://www.overleaf.com/project/672277fcee9f988699b13d9e
 #### Temat projektu: Sterowanie rozładunkiem statków w porcie w Rotterdamie
 
 #### Skład grupy:
