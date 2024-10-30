@@ -38,7 +38,6 @@ Założenia:
 - liczba dźwigów jest zawsze mniejsza niż liczba punktów z/r
 - każdy kontener posiada unikalne ID mówiące w którym slocie w punktcie tranzytowym ma zostać umieszczony
 - jeżeli punkt z/r przy slocie docelowym jest zajęty, wózek czeka, co skutkuje zablokowaniem trasy (albo jedzie na plac magazynowy, do przemyślenia)
-- s
 
 Opcjonalne rozszerzenia, jeżeli Roszkowska powie że za mało:
 - jeż na trasie: dodajemy losowe zdarzenie w postaci zablokowanej trasy. W takim przypadku pojazd musi się przed nim zatrzymać i poczekać, aż zdarzenie zniknie
