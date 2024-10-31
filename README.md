@@ -24,6 +24,9 @@ W porcie znajdują się:
 - dźwigi 
 - tor będący trasą dla wózków
 
+![image](https://github.com/user-attachments/assets/4f020bac-e328-40bf-ab25-4ea0c737f486)
+
+
 Założenia:
 - wózki przewożą kontenery ze statku do punktu tranzytowego  
 - jeżeli punkt tranzytowy jest zapełniony kontenery odstawiane są na plac magazynowy
