@@ -14,6 +14,15 @@ Dokumentacja w overleaf: https://www.overleaf.com/project/672277fcee9f988699b13d
 - Mikołaj Sęk
 - Sebastian Olejnik
 
+#### Zarządzanie projektem:
+- Prace całej grupy koordynuje lider
+- Grupa podzielona jest na 2 podgrupy; jedna odpowiada za wizualizację systemu (GUI), druga za część logiczną kodu
+- Harmonogram pracy określa wykres Gantta stworzony przez lidera grupy po konsultacji z zespołem
+- Dokumentacja projektu prowadzona jest w serwisie Overleaf z wykorzystanie składu tekstu LaTeX
+- Program realizujący zadanie projektowe prowadzony jest w serwisie Github z wykorzystaniem systemu kontroli wersji git
+- Spotkania grupy odbywają się zdalnie co 2 tygodnie w terminie ustalonym podczas spotkania wstępnego
+- Poszczególne części programu będą komunikować się za pośrednictwem protokołu zeroMQ i globalnie zdefiniowanych struktur danych 
+
 ## Założenia projektowe
 
 W porcie znajdują się:
