@@ -52,7 +52,7 @@ Założenia:
 - każdy kontener posiada unikalne ID mówiące w którym slocie w punktcie tranzytowym ma zostać umieszczony
 - jeżeli punkt z/r przy slocie docelowym jest zajęty, wózek czeka, co skutkuje zablokowaniem trasy (albo jedzie na plac magazynowy, do przemyślenia)
 
-Opcjonalne rozszerzenia, jeżeli Roszkowska powie że za mało:
+Opcjonalne rozszerzenia, jeżeli będzie za mało:
 - jeż na trasie: dodajemy losowe zdarzenie w postaci zablokowanej trasy. W takim przypadku pojazd musi się przed nim zatrzymać i poczekać, aż zdarzenie zniknie
 - przebita opona: dodajemy punkt serwisowy dla wózków. Może zdarzyć się, że wózek będzie musiał zjechać do warsztatu, co wyklucza go na pewien czas z pracy
 - nielegalni imigranci w kontenerze: kontener bez ładunku zostaje umieszczony na stałe na placu odstawczym, zmniejszając jego pojemność
