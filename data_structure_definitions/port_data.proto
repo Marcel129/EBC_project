@@ -1,0 +1,49 @@
+syntax = "proto2";
+
+message Ship{
+    optional bool isInPort = 1;
+    optional bool isEmpty = 2;
+    optional uint32 remainingContainersNo = 3;
+}
+
+message StorageYard{
+    optional uint32 containersNo = 1;
+    optional bool isEmpty = 2;
+}
+
+message LoadingPoint{
+    enum LoadingPoint_ID{
+        SHIP_1 = 0;
+        SHIP_2 = 1;
+        SHIP_3 = 2;
+        STORAGE_YARD_1 = 3;
+        STORAGE_YARD_2 = 4;
+        TRANSIT_POINT_AFRICA = 5;
+        TRANSIT_POINT_EUROPA = 6;
+        TRANSIT_POINT_ASIA = 7;
+        TRANSIT_POINT_AMERICA = 8;
+    }
+
+    optional LoadingPoint_ID ID = 1;
+    optional bool busy = 2;
+}
+
+message TransitPoint{
+    enum Port_ID {
+        AFRICA = 0;
+        EUROPA = 1;
+        ASIA = 2;
+        AMERICA = 3;
+    }
+
+    optional Port_ID ID = 1;
+    optional uint32 containersNo = 2;
+    optional bool isEmpty = 3;
+}
+
+message PortState{
+    optional Ship ship = 1;
+    optional StorageYard storageYard = 2;
+    repeated TransitPoint transitPoints = 3;
+    repeated LoadingPoint loadingPoints = 4;
+}
