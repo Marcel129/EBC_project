@@ -1,9 +1,7 @@
 import dearpygui.dearpygui as dpg
-import port_data_pb2 as port
 import zmq
+import port_data_pb2 as port
 import config as cfg
-
-# protoc --proto_path=./data_structure_definitions --python_out=./visualization/ ./data_structure_definitions/port_data.proto 
 
 dpg.create_context()
 
@@ -42,6 +40,8 @@ class Port:
 
         self.portData = port.PortState()
 
+        self.imagesFolder = "images/"
+
         self.isMoved = True
         self.images = {}
         self.imagesNames = [
@@ -53,7 +53,7 @@ class Port:
 
     def loadImages(self):
         for imgName in self.imagesNames:
-            self.images[imgName] = dpg.load_image(imgName)
+            self.images[imgName] = dpg.load_image(self.imagesFolder + imgName)
 
             with dpg.texture_registry(show=True):
                 dpg.add_dynamic_texture(
@@ -96,14 +96,6 @@ myPort = Port()
 myPort.loadImages()
 mainWindowWidth = myPort.images[myPort.imagesNames[0]][0]
 mainWindowHeight = myPort.images[myPort.imagesNames[0]][1]
-    
-def showShip_callback(sender, app_data):
-    dpg.show_item(item=f"{cfg.containers[5]}_image")
-    dpg.show_item(item=f"{cfg.containers[5]}_ind")
-
-def hideShip_callback(sender, app_data):
-    dpg.hide_item(item=f"{cfg.containers[5]}_image")
-    dpg.hide_item(item=f"{cfg.containers[5]}_ind")
 
 def updateGUIState(sender,data):
     while True:
@@ -137,8 +129,6 @@ with dpg.window(tag="mainWindow",
                         pos=cartPositions[i])
 
 with dpg.window(tag="controlWindow"):
-    dpg.add_button(label="Show ship", callback=showShip_callback)
-    dpg.add_button(label="Hide ship", callback=hideShip_callback)
     dpg.add_button(label="Update", callback=updateGUIState)
 
 dpg.create_viewport(

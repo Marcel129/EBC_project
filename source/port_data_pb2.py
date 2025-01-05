@@ -19,70 +19,10 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto2',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x0fport_data.proto\"H\n\x04Ship\x12\x10\n\x08isInPort\x18\x01 \x01(\x08\x12\x0f\n\x07isEmpty\x18\x02 \x01(\x08\x12\x1d\n\x15remainingContainersNo\x18\x03 \x01(\r\"4\n\x0bStorageYard\x12\x14\n\x0c\x63ontainersNo\x18\x01 \x01(\r\x12\x0f\n\x07isEmpty\x18\x02 \x01(\x08\"\x8e\x02\n\x0cLoadingPoint\x12)\n\x02ID\x18\x01 \x01(\x0e\x32\x1d.LoadingPoint.LoadingPoint_ID\x12\x0c\n\x04\x62usy\x18\x02 \x01(\x08\"\xc4\x01\n\x0fLoadingPoint_ID\x12\n\n\x06SHIP_1\x10\x00\x12\n\n\x06SHIP_2\x10\x01\x12\n\n\x06SHIP_3\x10\x02\x12\x12\n\x0eSTORAGE_YARD_1\x10\x03\x12\x12\n\x0eSTORAGE_YARD_2\x10\x04\x12\x18\n\x14TRANSIT_POINT_AFRICA\x10\x05\x12\x18\n\x14TRANSIT_POINT_EUROPA\x10\x06\x12\x16\n\x12TRANSIT_POINT_ASIA\x10\x07\x12\x19\n\x15TRANSIT_POINT_AMERICA\x10\x08\"\x92\x01\n\x0cTransitPoint\x12!\n\x02ID\x18\x01 \x01(\x0e\x32\x15.TransitPoint.Port_ID\x12\x14\n\x0c\x63ontainersNo\x18\x02 \x01(\r\x12\x0f\n\x07isEmpty\x18\x03 \x01(\x08\"8\n\x07Port_ID\x12\n\n\x06\x41\x46RICA\x10\x00\x12\n\n\x06\x45UROPA\x10\x01\x12\x08\n\x04\x41SIA\x10\x02\x12\x0b\n\x07\x41MERICA\x10\x03\"\xd1\x02\n\x04\x43\x61rt\x12\x0e\n\x06\x63\x61rtNo\x18\x01 \x01(\r\x12\x15\n\rwithContainer\x18\x02 \x01(\x08\x12#\n\x07\x63\x61rtPos\x18\x03 \x01(\x0e\x32\x12.Cart.CartPosition\"\xfc\x01\n\x0c\x43\x61rtPosition\x12\r\n\tAFRICA_LP\x10\x00\x12\x12\n\x0e\x41\x46RICA_WAITING\x10\x01\x12\r\n\tEUROPA_LP\x10\x02\x12\x12\n\x0e\x45UROPA_WAITING\x10\x03\x12\x0b\n\x07\x41SIA_LP\x10\x04\x12\x10\n\x0c\x41SIA_WAITING\x10\x05\x12\x0e\n\nAMERICA_LP\x10\x06\x12\x13\n\x0f\x41MERICA_WAITING\x10\x07\x12\n\n\x06ST_LP1\x10\x08\x12\n\n\x06ST_LP2\x10\t\x12\x0e\n\nST_WAITING\x10\n\x12\x0c\n\x08SHIP_LP1\x10\x0b\x12\x0c\n\x08SHIP_LP2\x10\x0c\x12\x0c\n\x08SHIP_LP3\x10\r\x12\x10\n\x0cSHIP_WAITIMG\x10\x0e\"\xa5\x01\n\tPortState\x12\x13\n\x04ship\x18\x01 \x01(\x0b\x32\x05.Ship\x12!\n\x0bstorageYard\x18\x02 \x01(\x0b\x32\x0c.StorageYard\x12$\n\rtransitPoints\x18\x03 \x03(\x0b\x32\r.TransitPoint\x12$\n\rloadingPoints\x18\x04 \x03(\x0b\x32\r.LoadingPoint\x12\x14\n\x05\x63\x61rts\x18\x05 \x03(\x0b\x32\x05.Cart'
+  serialized_pb=b'\n\x0fport_data.proto\"7\n\x04Ship\x12\x10\n\x08isInPort\x18\x01 \x01(\x08\x12\x1d\n\x15remainingContainersNo\x18\x02 \x01(\r\"#\n\x0bStorageYard\x12\x14\n\x0c\x63ontainersNo\x18\x01 \x01(\r\"\x81\x01\n\x0cTransitPoint\x12!\n\x02ID\x18\x01 \x01(\x0e\x32\x15.TransitPoint.Port_ID\x12\x14\n\x0c\x63ontainersNo\x18\x02 \x01(\r\"8\n\x07Port_ID\x12\n\n\x06\x41\x46RICA\x10\x00\x12\n\n\x06\x45UROPA\x10\x01\x12\x08\n\x04\x41SIA\x10\x02\x12\x0b\n\x07\x41MERICA\x10\x03\"\xc1\x02\n\x04\x43\x61rt\x12\x15\n\rwithContainer\x18\x02 \x01(\x08\x12#\n\x07\x63\x61rtPos\x18\x03 \x01(\x0e\x32\x12.Cart.CartPosition\"\xfc\x01\n\x0c\x43\x61rtPosition\x12\r\n\tAFRICA_LP\x10\x00\x12\x12\n\x0e\x41\x46RICA_WAITING\x10\x01\x12\r\n\tEUROPA_LP\x10\x02\x12\x12\n\x0e\x45UROPA_WAITING\x10\x03\x12\x0b\n\x07\x41SIA_LP\x10\x04\x12\x10\n\x0c\x41SIA_WAITING\x10\x05\x12\x0e\n\nAMERICA_LP\x10\x06\x12\x13\n\x0f\x41MERICA_WAITING\x10\x07\x12\n\n\x06ST_LP1\x10\x08\x12\n\n\x06ST_LP2\x10\t\x12\x0e\n\nST_WAITING\x10\n\x12\x0c\n\x08SHIP_LP1\x10\x0b\x12\x0c\n\x08SHIP_LP2\x10\x0c\x12\x0c\n\x08SHIP_LP3\x10\r\x12\x10\n\x0cSHIP_WAITIMG\x10\x0e\"\x7f\n\tPortState\x12\x13\n\x04ship\x18\x01 \x01(\x0b\x32\x05.Ship\x12!\n\x0bstorageYard\x18\x02 \x01(\x0b\x32\x0c.StorageYard\x12$\n\rtransitPoints\x18\x03 \x03(\x0b\x32\r.TransitPoint\x12\x14\n\x05\x63\x61rts\x18\x04 \x03(\x0b\x32\x05.Cart'
 )
 
 
-
-_LOADINGPOINT_LOADINGPOINT_ID = _descriptor.EnumDescriptor(
-  name='LoadingPoint_ID',
-  full_name='LoadingPoint.LoadingPoint_ID',
-  filename=None,
-  file=DESCRIPTOR,
-  create_key=_descriptor._internal_create_key,
-  values=[
-    _descriptor.EnumValueDescriptor(
-      name='SHIP_1', index=0, number=0,
-      serialized_options=None,
-      type=None,
-      create_key=_descriptor._internal_create_key),
-    _descriptor.EnumValueDescriptor(
-      name='SHIP_2', index=1, number=1,
-      serialized_options=None,
-      type=None,
-      create_key=_descriptor._internal_create_key),
-    _descriptor.EnumValueDescriptor(
-      name='SHIP_3', index=2, number=2,
-      serialized_options=None,
-      type=None,
-      create_key=_descriptor._internal_create_key),
-    _descriptor.EnumValueDescriptor(
-      name='STORAGE_YARD_1', index=3, number=3,
-      serialized_options=None,
-      type=None,
-      create_key=_descriptor._internal_create_key),
-    _descriptor.EnumValueDescriptor(
-      name='STORAGE_YARD_2', index=4, number=4,
-      serialized_options=None,
-      type=None,
-      create_key=_descriptor._internal_create_key),
-    _descriptor.EnumValueDescriptor(
-      name='TRANSIT_POINT_AFRICA', index=5, number=5,
-      serialized_options=None,
-      type=None,
-      create_key=_descriptor._internal_create_key),
-    _descriptor.EnumValueDescriptor(
-      name='TRANSIT_POINT_EUROPA', index=6, number=6,
-      serialized_options=None,
-      type=None,
-      create_key=_descriptor._internal_create_key),
-    _descriptor.EnumValueDescriptor(
-      name='TRANSIT_POINT_ASIA', index=7, number=7,
-      serialized_options=None,
-      type=None,
-      create_key=_descriptor._internal_create_key),
-    _descriptor.EnumValueDescriptor(
-      name='TRANSIT_POINT_AMERICA', index=8, number=8,
-      serialized_options=None,
-      type=None,
-      create_key=_descriptor._internal_create_key),
-  ],
-  containing_type=None,
-  serialized_options=None,
-  serialized_start=222,
-  serialized_end=418,
-)
-_sym_db.RegisterEnumDescriptor(_LOADINGPOINT_LOADINGPOINT_ID)
 
 _TRANSITPOINT_PORT_ID = _descriptor.EnumDescriptor(
   name='Port_ID',
@@ -114,8 +54,8 @@ _TRANSITPOINT_PORT_ID = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=511,
-  serialized_end=567,
+  serialized_start=187,
+  serialized_end=243,
 )
 _sym_db.RegisterEnumDescriptor(_TRANSITPOINT_PORT_ID)
 
@@ -204,8 +144,8 @@ _CART_CARTPOSITION = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=655,
-  serialized_end=907,
+  serialized_start=315,
+  serialized_end=567,
 )
 _sym_db.RegisterEnumDescriptor(_CART_CARTPOSITION)
 
@@ -226,15 +166,8 @@ _SHIP = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
-      name='isEmpty', full_name='Ship.isEmpty', index=1,
-      number=2, type=8, cpp_type=7, label=1,
-      has_default_value=False, default_value=False,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-    _descriptor.FieldDescriptor(
-      name='remainingContainersNo', full_name='Ship.remainingContainersNo', index=2,
-      number=3, type=13, cpp_type=3, label=1,
+      name='remainingContainersNo', full_name='Ship.remainingContainersNo', index=1,
+      number=2, type=13, cpp_type=3, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -252,7 +185,7 @@ _SHIP = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=19,
-  serialized_end=91,
+  serialized_end=74,
 )
 
 
@@ -271,13 +204,6 @@ _STORAGEYARD = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-    _descriptor.FieldDescriptor(
-      name='isEmpty', full_name='StorageYard.isEmpty', index=1,
-      number=2, type=8, cpp_type=7, label=1,
-      has_default_value=False, default_value=False,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
   ],
   extensions=[
   ],
@@ -290,48 +216,8 @@ _STORAGEYARD = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=93,
-  serialized_end=145,
-)
-
-
-_LOADINGPOINT = _descriptor.Descriptor(
-  name='LoadingPoint',
-  full_name='LoadingPoint',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  create_key=_descriptor._internal_create_key,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='ID', full_name='LoadingPoint.ID', index=0,
-      number=1, type=14, cpp_type=8, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-    _descriptor.FieldDescriptor(
-      name='busy', full_name='LoadingPoint.busy', index=1,
-      number=2, type=8, cpp_type=7, label=1,
-      has_default_value=False, default_value=False,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-    _LOADINGPOINT_LOADINGPOINT_ID,
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto2',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=148,
-  serialized_end=418,
+  serialized_start=76,
+  serialized_end=111,
 )
 
 
@@ -357,13 +243,6 @@ _TRANSITPOINT = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-    _descriptor.FieldDescriptor(
-      name='isEmpty', full_name='TransitPoint.isEmpty', index=2,
-      number=3, type=8, cpp_type=7, label=1,
-      has_default_value=False, default_value=False,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
   ],
   extensions=[
   ],
@@ -377,8 +256,8 @@ _TRANSITPOINT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=421,
-  serialized_end=567,
+  serialized_start=114,
+  serialized_end=243,
 )
 
 
@@ -391,21 +270,14 @@ _CART = _descriptor.Descriptor(
   create_key=_descriptor._internal_create_key,
   fields=[
     _descriptor.FieldDescriptor(
-      name='cartNo', full_name='Cart.cartNo', index=0,
-      number=1, type=13, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-    _descriptor.FieldDescriptor(
-      name='withContainer', full_name='Cart.withContainer', index=1,
+      name='withContainer', full_name='Cart.withContainer', index=0,
       number=2, type=8, cpp_type=7, label=1,
       has_default_value=False, default_value=False,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
-      name='cartPos', full_name='Cart.cartPos', index=2,
+      name='cartPos', full_name='Cart.cartPos', index=1,
       number=3, type=14, cpp_type=8, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
@@ -424,8 +296,8 @@ _CART = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=570,
-  serialized_end=907,
+  serialized_start=246,
+  serialized_end=567,
 )
 
 
@@ -459,15 +331,8 @@ _PORTSTATE = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
-      name='loadingPoints', full_name='PortState.loadingPoints', index=3,
+      name='carts', full_name='PortState.carts', index=3,
       number=4, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-    _descriptor.FieldDescriptor(
-      name='carts', full_name='PortState.carts', index=4,
-      number=5, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -484,12 +349,10 @@ _PORTSTATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=910,
-  serialized_end=1075,
+  serialized_start=569,
+  serialized_end=696,
 )
 
-_LOADINGPOINT.fields_by_name['ID'].enum_type = _LOADINGPOINT_LOADINGPOINT_ID
-_LOADINGPOINT_LOADINGPOINT_ID.containing_type = _LOADINGPOINT
 _TRANSITPOINT.fields_by_name['ID'].enum_type = _TRANSITPOINT_PORT_ID
 _TRANSITPOINT_PORT_ID.containing_type = _TRANSITPOINT
 _CART.fields_by_name['cartPos'].enum_type = _CART_CARTPOSITION
@@ -497,11 +360,9 @@ _CART_CARTPOSITION.containing_type = _CART
 _PORTSTATE.fields_by_name['ship'].message_type = _SHIP
 _PORTSTATE.fields_by_name['storageYard'].message_type = _STORAGEYARD
 _PORTSTATE.fields_by_name['transitPoints'].message_type = _TRANSITPOINT
-_PORTSTATE.fields_by_name['loadingPoints'].message_type = _LOADINGPOINT
 _PORTSTATE.fields_by_name['carts'].message_type = _CART
 DESCRIPTOR.message_types_by_name['Ship'] = _SHIP
 DESCRIPTOR.message_types_by_name['StorageYard'] = _STORAGEYARD
-DESCRIPTOR.message_types_by_name['LoadingPoint'] = _LOADINGPOINT
 DESCRIPTOR.message_types_by_name['TransitPoint'] = _TRANSITPOINT
 DESCRIPTOR.message_types_by_name['Cart'] = _CART
 DESCRIPTOR.message_types_by_name['PortState'] = _PORTSTATE
@@ -520,13 +381,6 @@ StorageYard = _reflection.GeneratedProtocolMessageType('StorageYard', (_message.
   # @@protoc_insertion_point(class_scope:StorageYard)
   })
 _sym_db.RegisterMessage(StorageYard)
-
-LoadingPoint = _reflection.GeneratedProtocolMessageType('LoadingPoint', (_message.Message,), {
-  'DESCRIPTOR' : _LOADINGPOINT,
-  '__module__' : 'port_data_pb2'
-  # @@protoc_insertion_point(class_scope:LoadingPoint)
-  })
-_sym_db.RegisterMessage(LoadingPoint)
 
 TransitPoint = _reflection.GeneratedProtocolMessageType('TransitPoint', (_message.Message,), {
   'DESCRIPTOR' : _TRANSITPOINT,
