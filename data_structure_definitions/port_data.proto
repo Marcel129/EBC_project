@@ -41,9 +41,33 @@ message TransitPoint{
     optional bool isEmpty = 3;
 }
 
+message Cart{
+    enum CartPosition {
+        AFRICA_LP = 0;
+        AFRICA_WAITING = 1;
+        EUROPA_LP = 2;
+        EUROPA_WAITING = 3;
+        ASIA_LP = 4;
+        ASIA_WAITING = 5;
+        AMERICA_LP = 6;
+        AMERICA_WAITING = 7;
+        ST_LP1 = 8;
+        ST_LP2 = 9;
+        ST_WAITING = 10;
+        SHIP_LP1 = 11;
+        SHIP_LP2 = 12;
+        SHIP_LP3 = 13;
+        SHIP_WAITIMG = 14;
+    }
+    optional uint32 cartNo = 1;
+    optional bool withContainer = 2;
+    optional CartPosition cartPos = 3;
+}
+
 message PortState{
     optional Ship ship = 1;
     optional StorageYard storageYard = 2;
     repeated TransitPoint transitPoints = 3;
     repeated LoadingPoint loadingPoints = 4;
+    repeated Cart carts = 5;
 }
