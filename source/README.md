@@ -16,6 +16,12 @@ Poza instalacja powyzszych bibliotek, do pliku programu ktory ma komunikowac sie
 ### Zmienne konfiguracyjne
 Zmienne konfiguracyjne programu (np. ilosc wozkow na placu), potrzebne zarowno w czesci logicznej, jak i GUI, umieszczone sa w pliku config.py. Jezeli w trakcie rozwoju projektu pojawia sie inne zmienne tego typu, powinny byc one umieszczone w tym pliku. 
 
+### Lokalizacje na placu
+Miejsca dostępne dla wózków pokazane są w data_structure_definitions/port - localizations.png. Miejsca, gdzie wózki oczekują na wjazd na pole załadunku/rozładunku:
+- każdy transit point ma swoje oddzielne miejsce
+- storage yard ma jedno wspólne miejsce oczekujące dla obu punktów z/r
+- miejsca przy statku również mają jedno wspólne miejsce oczekujące dla wszystkich punktów z/r
+
 ### Przyjmowane dane
 Program przyjmuje dane za posrednictwem handlera wygenerowanego z pliku .proto dla pythona. Wszystkie zmienne zdefiniowane w pliku .proto musza byc uzupelnione dla poprawnego dzialania GUI. 
 
@@ -36,3 +42,4 @@ python3 visu.py
 ```
 
 Do testow GUI napisano plik simpleSender.py. Mozna go wykorzystac jako demo backendu. 
+
