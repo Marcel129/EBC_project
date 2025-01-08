@@ -41,6 +41,13 @@ message Cart{
     }
     optional bool withContainer = 2;
     optional CartPosition cartPos = 3;
+    optional string name = 4;
+    optional uint32 targetID = 5;
+}
+
+message Crane{
+    optional bool isReady = 1;
+    optional string name = 2;
 }
 
 message PortState{
