@@ -48,8 +48,8 @@ class Controller:
 
         # Receiver
         self.receiver = self.zmq_context.socket(zmq.SUB)
-        self.receiver.connect("tcp://localhost:5555")  # Example port
-        self.receiver.setsockopt(zmq.SUBSCRIBE, b"")  # Subscribe to all topics
+        self.receiver.connect("tcp://127.0.0.1:5555")  # Example port
+        self.receiver.setsockopt(zmq.SUBSCRIBE, b"")
 
         # Sender
         self.publisher_IPaddress = "localhost"
@@ -87,6 +87,10 @@ class Controller:
     #         self.handle_cart_event(message.carts)
 
     def recieved_ship_status(self, msg):
+
+        if not isinstance(msg, port.Ship):
+            logging.error("Received message is not of type 'Ship'.")
+            return
 
         self.ship = msg.isInPort
         self.ship_remainingContainersNo = msg.remainingContainersNo
@@ -306,36 +310,69 @@ class Controller:
         while True:
             try:
                 # Receive raw message
-                # raw_message = await self.receiver.recv_multipart()
-                port.Crane.ParseFromString(self.receiver.recv_multipart())
-                # if self.is_ship_message(raw_message):
-                #     message = port.Ship.FromString(raw_message)
-                #     logging.info("Received Ship message.")
-                #     self.recieved_ship_status(message)
+                # raw_message = await port.Ship.ParseFromString(self.receiver.recv())
+                # Receive raw message
+                # raw_message = await self.receiver.recv()  # Await to get the raw message
+                # message = port.Ship()  # Create an empty Ship message
+                # message.ParseFromString(raw_message)  # Parse the raw message
+                # # self.Ship.ParseFromString(self.socket.recv())
+                # # # raw_message is a list, the second part (index 1) is the Protobuf message
+                # # message = port.Ship.FromString(raw_message)
+                # logging.info("Received Ship message.")
+                # await self.recieved_ship_status(raw_message)
+                # Receive raw message
+                self.Ship = port.Ship()
+                self.Ship.ParseFromString(self.receiver.recv())
+                # raw_message.ParseFromString(
+                #     self.receiver.recv()
+                # )  # No await needed, it's synchronous
 
-                # elif self.is_cart_message(raw_message):
-                #     message = port.Cart.FromString(raw_message)
-                #     logging.info("Received Cart message.")
-                #     self.recieved_cart_status(message)
+                # logging.info(f"Received raw message: {self.Ship}")
 
-                # elif self.is_crane_message(raw_message):
-                #     message = port.Crane.FromString(raw_message)
-                #     logging.info("Received Crane message.")
-                #     self.recieved_cranes_status(message)
-                # topic, raw_message = await self.receiver.recv_multipart()
-                # logging.info(f"Received message with topic: {topic.decode()}")
-                # if topic == b"Ship":
-                #     message = port.Ship.FromString(raw_message)
-                #     logging.info(f"Processing Ship message: {message}")
-                # elif topic == b"Crane":
-                #     message = port.Crane.FromString(raw_message)
-                #     logging.info(f"Processing Crane message: {message}")
+                # Parse the raw message into the Ship object
+                # message = port.Ship()
+                # success = message.ParseFromString(raw_message)
+                # print(success)
+                # self.recieved_ship_status(
+                #     message.ParseFromString(self.receiver.recv())
+                # )
 
-                # else:
-                #     logging.warning("Received unrecognized message.")
+            # # # Identify and process message based on known message structure
+            # # if self.is_port_state_message(raw_message):
+            # #     message = port.PortState.FromString(raw_message)
+            # #     logging.info("Received PortState message.")
+            # #     await self.process_event(message)
 
-                self.update_containers_status()
-                self.send_command()
+            # if self.is_ship_message(raw_message):
+            #     message = port.Ship.FromString(raw_message)
+            #     logging.info("Received Ship message.")
+            #     self.recieved_ship_status(message)
+
+            # elif self.is_cart_message(raw_message):
+            #     message = port.Cart.FromString(raw_message)
+            #     logging.info("Received Cart message.")
+            #     self.recieved_cart_status(message)
+
+            # elif self.is_crane_message(raw_message):
+            #     message = port.Crane.FromString(raw_message)
+            #     logging.info("Received Crane message.")
+            #     self.recieved_cranes_status(message)
+
+            # # elif self.is_storage_yard_message(raw_message):
+            # #     message = port.StorageYard.FromString(raw_message)
+            # #     logging.info("Received StorageYard message.")
+            # #     self.handle_storage_yard_event(message)
+
+            # # elif self.is_transit_point_message(raw_message):
+            # #     message = port.TransitPoint.FromString(raw_message)
+            # #     logging.info("Received TransitPoint message.")
+            # #     self.handle_transit_point_event(message)
+
+            # else:
+            #     logging.warning("Received unrecognized message.")
+
+            # self.update_containers_status()
+            # self.send_command()
             except Exception as e:
                 logging.error(f"Error processing message: {e}", exc_info=True)
 
@@ -363,7 +400,7 @@ class Controller:
             new_point.ID = id
             new_point.containersNo = int(rnd.random() * cfg.containers_capacities[i])
             i += 1
-        self.sender.send([data.SerializeToString()])
+        self.sender.send_multipart([topic.encode(), data.SerializeToString()])
 
 
 def generate_unique_elements(n: int, target_mod: int = 4) -> List[Dict[str, int]]:
@@ -391,7 +428,6 @@ if __name__ == "__main__":
     controller = Controller()
 
     try:
-        while True:
-            controller.main_loop()
+        (controller.main_loop())
     except KeyboardInterrupt:
         logging.info("Simulation terminated.")

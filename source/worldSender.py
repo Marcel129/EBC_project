@@ -16,9 +16,9 @@ class WorldSimulator:
     def __init__(self, publisher_ip="localhost", publisher_port="5555"):
         self.zmq_context = zmq.Context()
         self.publisher = self.zmq_context.socket(zmq.PUB)
-        self.publisher.connect(f"tcp://{publisher_ip}:{publisher_port}")  # Use bind()
+        self.publisher.bind(f"tcp://{publisher_ip}:{publisher_port}")  # Use bind()
 
-    # def send_message(self, message):
+    # async def send_message(self, message):
     #     """
     #     Sends a serialized Protobuf message with a topic.
     #     """
@@ -27,33 +27,34 @@ class WorldSimulator:
     #         [topic.encode(), message.SerializeToString()]
     #     )
 
-    # def generate_ship_message(self):
-    #     """
-    #     Generate and send a Ship message.
-    #     """
-    #     ship = port.Ship()
-    #     ship.isInPort = rnd.choice([True, False])
-    #     ship.remainingContainersNo = (
-    #         int(rnd.random() * cfg.containers_capacities[5]) if ship.isInPort else 0
-    #     )
-    #     await self.send_message(ship)
-    #     logging.info(f"Sent Ship message: {ship}")
+    def generate_ship_message(self):
+        """
+        Generate and send a Ship message.
+        """
+        ship = port.Ship()
+        ship.isInPort = rnd.choice([True, False])
+        ship.remainingContainersNo = (
+            int(rnd.random() * cfg.containers_capacities[5]) if ship.isInPort else 0
+        )
+        # await self.send_message(ship)
+        self.publisher.send(ship.SerializeToString())
+        logging.info(f"Sent Ship message: {ship}")
 
-    def generate_crane_message(self):
-        """
-        Generate and send a Crane message.
-        """
-        # for i in range(cfg.numberOfCranes):
-        #     crane = port.Crane()
-        #     crane.name = f"CRANE_{i}"  # TODO
-        #     crane.isReady = True
-        #     await self.send_message(crane)
-        #     logging.info(f"Sent Crane message: {crane}")
-        crane = port.Crane()
-        crane.isReady = True
-        crane.name = "CRANE_0"
-        self.publisher.send(crane.SerializeToString())
-        logging.info(f"Sent Crane message: {crane}")
+    # async def generate_crane_message(self):
+    #     """
+    #     Generate and send a Crane message.
+    #     """
+    #     # for i in range(cfg.numberOfCranes):
+    #     #     crane = port.Crane()
+    #     #     crane.name = f"CRANE_{i}"  # TODO
+    #     #     crane.isReady = True
+    #     #     await self.send_message(crane)
+    #     #     logging.info(f"Sent Crane message: {crane}")
+    #     crane = port.Crane()
+    #     crane.isReady = True
+    #     crane.name = "CRANE_0"
+    #     await self.send_message(crane)
+    #     logging.info(f"Sent Crane message: {crane}")
 
     # async def generate_cart_message(self):
     #     """
@@ -92,27 +93,27 @@ class WorldSimulator:
         Main simulation loop.
         Periodically sends rnd.randomized messages to simulate world behavior.
         """
-        # while True:
-        try:
-            # # rnd.randomly pick a message type to send
-            # message_type = rnd.choice(
-            #     [
-            #         self.generate_ship_message,
-            #         self.generate_crane_message,
-            #         self.generate_cart_message,
-            #         # self.generate_transit_point_message,
-            #         # self.generate_storage_yard_message,
-            #     ]
-            # )
+        while True:
+            try:
+                # # rnd.randomly pick a message type to send
+                # message_type = rnd.choice(
+                #     [
+                #         self.generate_ship_message,
+                #         self.generate_crane_message,
+                #         self.generate_cart_message,
+                #         # self.generate_transit_point_message,
+                #         # self.generate_storage_yard_message,
+                #     ]
+                # )
 
-            # await message_type()  # Generate and send the selected message
-            # await asyncio.sleep(rnd.uniform(0.5, 2))  # rnd.random delay
-            self.generate_crane_message()  # Test with sending Crane messages
-            import time
-
-            time.sleep(2)  # Adjust sleep as needed
-        except Exception as e:
-            logging.error(f"Error during simulation: {e}", exc_info=True)
+                # await message_type()  # Generate and send the selected message
+                # await asyncio.sleep(rnd.uniform(0.5, 2))  # rnd.random delay
+                self.generate_ship_message()  # Test with sending Crane messages
+                import time
+                time.sleep(2)
+                # asyncio.sleep(2)  # Adjust sleep as needed
+            except Exception as e:
+                logging.error(f"Error during simulation: {e}", exc_info=True)
 
 
 if __name__ == "__main__":
