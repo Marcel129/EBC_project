@@ -80,7 +80,8 @@ class Controller:
         self.containers: List[Dict[str, int]] = []  # Initialize containers
         self.cranes: List[Dict[str, bool]] = []  # Initialize cranes
         self.carts: List[Dict[str, bool, int]] = []  # Initialize carts
-        self.storage_containers = []  # TODO REST
+        self.transit_points: List[Dict[str, int]] = []  # Initialize transit points
+        self.storage_containers = 0  
 
     # async def process_event(self, message):
     #     # Parse incoming message based on type
@@ -147,7 +148,7 @@ class Controller:
 
                 found = True
                 logging.info(
-                    f"Carts {msg.name} status is updated. Current status: {msg.isReady}. Current position: {msg.cartPos}"
+                    f"Carts {msg.name} status is updated. Current status: {msg.withContainer}. Current position: {msg.cartPos}. Current target: {msg.targetID}"
                 )
                 break
 
@@ -165,11 +166,26 @@ class Controller:
                 f"Cart_name {msg.name} added. Initial status: {msg.withContainer}, position: {msg.cartPos}, target: {msg.targetID}"
             )
     def recieved_transit_point_status(self, msg):
-        # TODO
-        pass
+        found = False
+        # Iterate through the list of transit points to check if the crane already exists
+        for existing_trans_point in self.transit_points:
+            if existing_trans_point["Port_ID"] == msg.ID:
+                # Update the crane's status if it exists
+                existing_trans_point["containersNo"] = msg.containersNo
+                found = True
+                logging.info(
+                    f"TransitPoint {msg.ID} status is updated. Current status: {msg.containersNo}"
+                )
+                break
+        # If the crane is not found, append it to the list
+        if not found:
+            self.transit_points.append({"Port_ID": msg.ID, "containersNo": msg.containersNo})
+            logging.info(f"TransitPoint {msg.ID} added. Initial status: {msg.containersNo}")
+
     def recieved_storage_yard_status(self, msg):
-        # TODO
-        pass
+        self.storage_containers = msg.containersNo
+        logging.info(f"Storage yard is updated. Current status: {self.storage_containers}")
+
     def move_container(self, position_set, unload):
         tmp = [cart for cart in self.carts if cart["Position"] in position_set]
         tmp = [cart for cart in tmp if cart["Status"] != unload]
