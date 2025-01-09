@@ -10,6 +10,9 @@ import port_data_pb2 as port
 import zmq
 import zmq.asyncio
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
 CRANE_1 = "SHIP_C1"  # UPPER
 CRANE_2 = "SHIP_C2"  # LOWER
 CRANE_3 = "SHIP_T1"  # AFRICA - EUROPA
@@ -47,8 +50,11 @@ class Controller:
         self.zmq_context = zmq.Context()
 
         # Receiver
+        self.receiver_IPaddress = "localhost"
+        self.receiver_port = "5555"
+
         self.receiver = self.zmq_context.socket(zmq.SUB)
-        self.receiver.connect("tcp://127.0.0.1:5555")  # Example port
+        self.receiver.connect(f"tcp://{self.receiver_IPaddress}:{self.receiver_port}")
         self.receiver.setsockopt(zmq.SUBSCRIBE, b"")
 
         # Sender
@@ -61,12 +67,9 @@ class Controller:
         # Port variables
         self.ship: bool = False
         self.ship_remainingContainersNo: int = 0
-        self.containers: List[Dict[str, int]]
-
-        self.cranes: List[Dict[str, bool]]
-
-        self.carts: List[Dict[str, bool, int]]
-
+        self.containers: List[Dict[str, int]] = []  # Initialize containers
+        self.cranes: List[Dict[str, bool]] = []  # Initialize cranes
+        self.carts: List[Dict[str, bool, int]] = []  # Initialize carts
         self.storage_containers = []  # TODO REST
 
     # async def process_event(self, message):
@@ -100,7 +103,7 @@ class Controller:
             f"Ship status is updated. Current status: {self.ship}, no: {self.ship_remainingContainersNo}"
         )
 
-    def recieved_cranes_status(self, msg):
+    def recieved_crane_status(self, msg):
 
         found = False
 
@@ -151,7 +154,12 @@ class Controller:
             logging.info(
                 f"Cart_name {msg.name} added. Initial status: {msg.withContainer}, position: {msg.cartPos}, target: {msg.targetID}"
             )
-
+    def recieved_transit_point_status(self, msg):
+        # TODO
+        pass
+    def recieved_storage_yard_status(self, msg):
+        # TODO
+        pass
     def move_container(self, position_set, unload):
         tmp = [cart for cart in self.carts if cart["Position"] in position_set]
         tmp = [cart for cart in tmp if cart["Status"] != unload]
@@ -301,7 +309,7 @@ class Controller:
         new_cart.cartPos = cart_data["Position"]
         new_cart.targetID = cart_data["Target"]
         logging.info(f"Added new cart {cart_data['Cart_name']} to PortState.")
-
+    
     def main_loop(self):
         """
         Main loop to process incoming messages of various types.
@@ -321,13 +329,73 @@ class Controller:
                 # logging.info("Received Ship message.")
                 # await self.recieved_ship_status(raw_message)
                 # Receive raw message
-                self.Ship = port.Ship()
-                self.Ship.ParseFromString(self.receiver.recv())
-                # raw_message.ParseFromString(
-                #     self.receiver.recv()
-                # )  # No await needed, it's synchronous
+                # self.Ship = port.Ship()
+                # self.Ship.ParseFromString(self.receiver.recv())
+                # print(self.Ship)
+                # Odbieranie wiadomości w kontrolerze
+                # Receive raw message
+                raw_message = self.receiver.recv_multipart()
 
-                # logging.info(f"Received raw message: {self.Ship}")
+                # Topic to pierwszy element wiadomości
+                topic = raw_message[0].decode()  # Decode topic
+
+                # Message data to drugi element wiadomości
+                message_data = raw_message[1]
+
+                # Ensure message data is not empty before attempting to parse
+                if not message_data:
+                    logging.warning(f"Empty message data for topic: {topic}")
+                    continue  # Skip processing this message
+
+                # Process based on topic
+                if topic == "ship":
+                    msg = port.Ship()
+                    try:
+                        msg.ParseFromString(message_data)
+                        logging.info("Received Ship message.")
+                        print(msg)
+                        self.recieved_ship_status(msg)
+                    except Exception as e:
+                        logging.error(f"Error processing Ship message: {e}, topic: {topic}")
+                elif topic == "cart":
+                    msg = port.Cart()
+                    try:
+                        msg.ParseFromString(message_data)
+                        logging.info("Received Cart message.")
+                        print(msg)
+                        self.recieved_cart_status(msg)
+                    except Exception as e:
+                        logging.error(f"Error processing Cart message: {e}, topic: {topic}")
+                elif topic == "crane":
+                    msg = port.Crane()
+                    try:
+                        msg.ParseFromString(message_data)
+                        logging.info("Received Crane message.")
+                        print(msg)
+                        self.recieved_crane_status(msg)
+                    except Exception as e:
+                        logging.error(f"Error processing Crane message: {e}, topic: {topic}")
+                elif topic == "storage_yard":
+                    msg = port.StorageYard()
+                    try:
+                        msg.ParseFromString(message_data)
+                        logging.info("Received StorageYard message.")
+                        print(msg)
+                        self.recieved_storage_yard_status(msg)
+                    except Exception as e:
+                        logging.error(f"Error processing StorageYard message: {e}, topic: {topic}")
+                elif topic == "transit_point":
+                    msg = port.TransitPoint()
+                    try:
+                        msg.ParseFromString(message_data)
+                        logging.info("Received TransitPoint message.")
+                        print(msg)
+                        self.recieved_transit_point_status(msg)
+                    except Exception as e:
+                        logging.error(f"Error processing TransitPoint message: {e}, topic: {topic}")
+                else:
+                    logging.warning(f"Unrecognized topic: {topic}")
+
 
                 # Parse the raw message into the Ship object
                 # message = port.Ship()
@@ -371,16 +439,15 @@ class Controller:
             # else:
             #     logging.warning("Received unrecognized message.")
 
-            # self.update_containers_status()
-            # self.send_command()
+                # self.update_containers_status()
+                # self.send_command()
+                self.update_gui()
             except Exception as e:
                 logging.error(f"Error processing message: {e}", exc_info=True)
-
-    def send_command(self, topic, data):
+    def update_gui(self):
         # Serialize and send a Protobuf message
         self.myPort.ship.isInPort = self.ship
-        self.myPort.ship.remainingContainersNo = self.ship_remainingContainersNo
-
+        self.myPort.ship.remainingContainersNo = self.ship_remainingContainersNo      
         self.add_cart_to_port_state(self.myPort, self.carts)
 
         transitPointsIDs = [
@@ -400,7 +467,34 @@ class Controller:
             new_point.ID = id
             new_point.containersNo = int(rnd.random() * cfg.containers_capacities[i])
             i += 1
-        self.sender.send_multipart([topic.encode(), data.SerializeToString()])
+        
+        self.sender.send(self.myPort.SerializeToString())
+
+    # def send_command(self, topic, data):
+    #     # Serialize and send a Protobuf message
+    #     self.myPort.ship.isInPort = self.ship
+    #     self.myPort.ship.remainingContainersNo = self.ship_remainingContainersNo
+
+    #     self.add_cart_to_port_state(self.myPort, self.carts)
+
+    #     transitPointsIDs = [
+    #         port.TransitPoint.Port_ID.AFRICA,
+    #         port.TransitPoint.Port_ID.EUROPA,
+    #         port.TransitPoint.Port_ID.ASIA,
+    #         port.TransitPoint.Port_ID.AMERICA,
+    #     ]
+
+    #     self.myPort.storageYard.containersNo = int(
+    #         rnd.random() * cfg.containers_capacities[4]
+    #     )
+
+    #     i = 0
+    #     for id in transitPointsIDs:
+    #         new_point = self.myPort.transitPoints.add()
+    #         new_point.ID = id
+    #         new_point.containersNo = int(rnd.random() * cfg.containers_capacities[i])
+    #         i += 1
+    #     self.sender.send_multipart([topic.encode(), data.SerializeToString()])
 
 
 def generate_unique_elements(n: int, target_mod: int = 4) -> List[Dict[str, int]]:
