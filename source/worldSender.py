@@ -116,6 +116,7 @@ class WorldSimulator:
         Main simulation loop.
         Periodically sends rnd.randomized messages to simulate world behavior.
         """
+
         while True:
             try:
                 # # rnd.randomly pick a message type to send
@@ -137,7 +138,7 @@ class WorldSimulator:
                 self.generate_cart_message()  # Test with sending Crane messages
                 self.generate_crane_message()  # Test with sending Crane messages
                 import time
-                time.sleep(2)
+                time.sleep(10)
                 # asyncio.sleep(2)  # Adjust sleep as needed
             except Exception as e:
                 logging.error(f"Error during simulation: {e}", exc_info=True)

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import random
+import threading
 import random as rnd
 import time
 from typing import Dict, List, Set, Tuple
@@ -40,9 +41,18 @@ class PortPositions(Enum):
     SHIP_LP3 = 13
     SHIP_WAITIMG = 14
 
+transitPointsIDs = [
+    port.TransitPoint.Port_ID.AFRICA,
+    port.TransitPoint.Port_ID.EUROPA,
+    port.TransitPoint.Port_ID.ASIA,
+    port.TransitPoint.Port_ID.AMERICA,
+]
+
 
 class Controller:
     def __init__(self):
+        self.running = True
+
         # State tracking
         self.myPort = port.PortState()
 
@@ -299,7 +309,7 @@ class Controller:
                 existing_cart.withContainer = cart_data["Status"]
                 existing_cart.cartPos = cart_data["Position"]
                 existing_cart.targetID = cart_data["Target"]
-                logging.info(f"Updated cart {cart_data['Cart_name']} in PortState.")
+                # logging.info(f"Updated cart {cart_data['Cart_name']} in PortState.")
                 return
 
         # If the cart does not exist, add a new one
@@ -309,44 +319,81 @@ class Controller:
         new_cart.cartPos = cart_data["Position"]
         new_cart.targetID = cart_data["Target"]
         logging.info(f"Added new cart {cart_data['Cart_name']} to PortState.")
+
+    def send_port_state(self):
+        while self.running:
+            # Serialize and send a Protobuf message
+            self.myPort.ship.isInPort = self.ship
+            self.myPort.ship.remainingContainersNo = self.ship_remainingContainersNo
+
+            # Iterate through self.carts and add/update each cart
+            for cart_data in self.carts:
+                self.add_cart_to_port_state(self.myPort, cart_data)
+
+            # Add transit points
+            transitPointsIDs = [
+                port.TransitPoint.Port_ID.AFRICA,
+                port.TransitPoint.Port_ID.EUROPA,
+                port.TransitPoint.Port_ID.ASIA,
+                port.TransitPoint.Port_ID.AMERICA,
+            ]
+
+            self.myPort.storageYard.containersNo = int(
+                rnd.random() * cfg.containers_capacities[4]
+            )
+
+            for i, id in enumerate(transitPointsIDs):
+                new_point = self.myPort.transitPoints.add()
+                new_point.ID = id
+                new_point.containersNo = int(rnd.random() * cfg.containers_capacities[i])
+
+            self.sender.send(self.myPort.SerializeToString())
+            logging.info(f"PortState sent: {self.myPort}")
+            time.sleep(1)
+
+    # def send_command(self, topic, data):
+    #     # Serialize and send a Protobuf message
+    #     self.myPort.ship.isInPort = self.ship
+    #     self.myPort.ship.remainingContainersNo = self.ship_remainingContainersNo
+
+    #     self.add_cart_to_port_state(self.myPort, self.carts)
+
+    #     transitPointsIDs = [
+    #         port.TransitPoint.Port_ID.AFRICA,
+    #         port.TransitPoint.Port_ID.EUROPA,
+    #         port.TransitPoint.Port_ID.ASIA,
+    #         port.TransitPoint.Port_ID.AMERICA,
+    #     ]
+
+    #     self.myPort.storageYard.containersNo = int(
+    #         rnd.random() * cfg.containers_capacities[4]
+    #     )
+
+    #     i = 0
+    #     for id in transitPointsIDs:
+    #         new_point = self.myPort.transitPoints.add()
+    #         new_point.ID = id
+    #         new_point.containersNo = int(rnd.random() * cfg.containers_capacities[i])
+    #         i += 1
+    #     self.sender.send_multipart([topic.encode(), data.SerializeToString()])
     
     def main_loop(self):
         """
         Main loop to process incoming messages of various types.
         Continuously listens for messages and processes them based on their expected type.
         """
-        while True:
+        while self.running:
             try:
-                # Receive raw message
-                # raw_message = await port.Ship.ParseFromString(self.receiver.recv())
-                # Receive raw message
-                # raw_message = await self.receiver.recv()  # Await to get the raw message
-                # message = port.Ship()  # Create an empty Ship message
-                # message.ParseFromString(raw_message)  # Parse the raw message
-                # # self.Ship.ParseFromString(self.socket.recv())
-                # # # raw_message is a list, the second part (index 1) is the Protobuf message
-                # # message = port.Ship.FromString(raw_message)
-                # logging.info("Received Ship message.")
-                # await self.recieved_ship_status(raw_message)
-                # Receive raw message
-                # self.Ship = port.Ship()
-                # self.Ship.ParseFromString(self.receiver.recv())
-                # print(self.Ship)
-                # Odbieranie wiadomości w kontrolerze
-                # Receive raw message
+                
                 raw_message = self.receiver.recv_multipart()
-
                 # Topic to pierwszy element wiadomości
                 topic = raw_message[0].decode()  # Decode topic
-
                 # Message data to drugi element wiadomości
                 message_data = raw_message[1]
-
                 # Ensure message data is not empty before attempting to parse
                 if not message_data:
                     logging.warning(f"Empty message data for topic: {topic}")
                     continue  # Skip processing this message
-
                 # Process based on topic
                 if topic == "ship":
                     msg = port.Ship()
@@ -395,8 +442,28 @@ class Controller:
                         logging.error(f"Error processing TransitPoint message: {e}, topic: {topic}")
                 else:
                     logging.warning(f"Unrecognized topic: {topic}")
+            except Exception as e:
+                logging.error(f"Error processing message: {e}", exc_info=True)
 
+    
 
+                # Receive raw message
+                # raw_message = await port.Ship.ParseFromString(self.receiver.recv())
+                # Receive raw message
+                # raw_message = await self.receiver.recv()  # Await to get the raw message
+                # message = port.Ship()  # Create an empty Ship message
+                # message.ParseFromString(raw_message)  # Parse the raw message
+                # # self.Ship.ParseFromString(self.socket.recv())
+                # # # raw_message is a list, the second part (index 1) is the Protobuf message
+                # # message = port.Ship.FromString(raw_message)
+                # logging.info("Received Ship message.")
+                # await self.recieved_ship_status(raw_message)
+                # Receive raw message
+                # self.Ship = port.Ship()
+                # self.Ship.ParseFromString(self.receiver.recv())
+                # print(self.Ship)
+                # Odbieranie wiadomości w kontrolerze
+                # Receive raw message
                 # Parse the raw message into the Ship object
                 # message = port.Ship()
                 # success = message.ParseFromString(raw_message)
@@ -439,63 +506,20 @@ class Controller:
             # else:
             #     logging.warning("Received unrecognized message.")
 
-                # self.update_containers_status()
-                # self.send_command()
-                self.update_gui()
-            except Exception as e:
-                logging.error(f"Error processing message: {e}", exc_info=True)
-    def update_gui(self):
-        # Serialize and send a Protobuf message
-        self.myPort.ship.isInPort = self.ship
-        self.myPort.ship.remainingContainersNo = self.ship_remainingContainersNo      
-        self.add_cart_to_port_state(self.myPort, self.carts)
 
-        transitPointsIDs = [
-            port.TransitPoint.Port_ID.AFRICA,
-            port.TransitPoint.Port_ID.EUROPA,
-            port.TransitPoint.Port_ID.ASIA,
-            port.TransitPoint.Port_ID.AMERICA,
-        ]
+    def run(self):
+        gui_thread = threading.Thread(target=self.send_port_state, daemon=True)
+        main_thread = threading.Thread(target=self.main_loop, daemon=True)
 
-        self.myPort.storageYard.containersNo = int(
-            rnd.random() * cfg.containers_capacities[4]
-        )
+        gui_thread.start()
+        main_thread.start()
 
-        i = 0
-        for id in transitPointsIDs:
-            new_point = self.myPort.transitPoints.add()
-            new_point.ID = id
-            new_point.containersNo = int(rnd.random() * cfg.containers_capacities[i])
-            i += 1
-        
-        self.sender.send(self.myPort.SerializeToString())
-
-    # def send_command(self, topic, data):
-    #     # Serialize and send a Protobuf message
-    #     self.myPort.ship.isInPort = self.ship
-    #     self.myPort.ship.remainingContainersNo = self.ship_remainingContainersNo
-
-    #     self.add_cart_to_port_state(self.myPort, self.carts)
-
-    #     transitPointsIDs = [
-    #         port.TransitPoint.Port_ID.AFRICA,
-    #         port.TransitPoint.Port_ID.EUROPA,
-    #         port.TransitPoint.Port_ID.ASIA,
-    #         port.TransitPoint.Port_ID.AMERICA,
-    #     ]
-
-    #     self.myPort.storageYard.containersNo = int(
-    #         rnd.random() * cfg.containers_capacities[4]
-    #     )
-
-    #     i = 0
-    #     for id in transitPointsIDs:
-    #         new_point = self.myPort.transitPoints.add()
-    #         new_point.ID = id
-    #         new_point.containersNo = int(rnd.random() * cfg.containers_capacities[i])
-    #         i += 1
-    #     self.sender.send_multipart([topic.encode(), data.SerializeToString()])
-
+        try:
+            while self.running:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            self.running = False
+            logging.info("Simulation terminated.")
 
 def generate_unique_elements(n: int, target_mod: int = 4) -> List[Dict[str, int]]:
     elements = []
@@ -520,8 +544,4 @@ def generate_unique_elements(n: int, target_mod: int = 4) -> List[Dict[str, int]
 
 if __name__ == "__main__":
     controller = Controller()
-
-    try:
-        (controller.main_loop())
-    except KeyboardInterrupt:
-        logging.info("Simulation terminated.")
+    controller.run()
