@@ -24,6 +24,13 @@ class WorldSimulator:
         self.publisher = self.zmq_context.socket(zmq.PUB)
         self.publisher.bind(f"tcp://{publisher_ip}:{publisher_port}")  # Use bind()
 
+        self.ship = port.Ship()
+        self.cranes = [port.Crane() for _ in range(cfg.numberOfCranes)]
+        self.carts = [port.Cart() for __ in range(cfg.numberOfCarts)]
+        self.storage_yard = port.StorageYard()
+        self.transit_points = [port.TransitPoint for __ in range(4)]
+        
+
     # async def send_message(self, message):
     #     """
     #     Sends a serialized Protobuf message with a topic.
