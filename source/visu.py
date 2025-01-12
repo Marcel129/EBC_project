@@ -38,7 +38,7 @@ class Port:
         self.socket = self.context.socket(zmq.SUB)
 
         self.socket.connect(f"tcp://{self.subscriber_IPaddress}:{self.subscriber_port}")
-        self.socket.setsockopt(zmq.SUBSCRIBE, b"")
+        self.socket.setsockopt(zmq.SUBSCRIBE, b"port_state")
 
         self.portData = port.PortState()
 
