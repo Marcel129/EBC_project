@@ -114,7 +114,7 @@ class Controller:
         if not isinstance(msg, port.Ship):
             logging.error("Received message is not of type 'Ship'.")
             return
-
+        print("get ship message from world")
         self.ship = msg.isInPort
         self.ship_remainingContainersNo = msg.remainingContainersNo
         if self.ship_remainingContainersNo > 0:
@@ -133,6 +133,7 @@ class Controller:
                 # Update the crane's status if it exists
                 existing_crane["Status"] = msg.isReady
                 found = True
+                print(f"Crane {msg.name} status is updated. Current status: {msg.isReady}")
                 logging.info(
                     f"Crane {msg.name} status is updated. Current status: {msg.isReady}"
                 )
@@ -203,15 +204,18 @@ class Controller:
         )
 
     def move_container(self, position_set, unload, target_flag):
+        # tmp = [
+        #     cart for cart in self.carts if cart["Position"] in position_set
+        # ]  # Check if cart in correct place
+        # tmp = [
+        #     cart for cart in tmp if cart["Status"] != unload
+        # ]  # Check if it has an container
         tmp = [
-            cart for cart in self.carts if cart["Position"] in position_set
-        ]  # Check if cart in correct place
-        tmp = [
-            cart for cart in tmp if cart["Status"] != unload
-        ]  # Check if it has an container
+            cart for cart in self.carts 
+            if cart["Position"] in position_set and cart["Status"] != unload
+        ]  # Check if cart in correct place and if it doesn't have a container (unload)
         if len(tmp) == 1 or len(tmp) == 2:
             cart_to_update = tmp[0]
-
             occupied_fields = [
                 (
                     1
@@ -220,24 +224,23 @@ class Controller:
                 )
                 for position in PortPositions
             ]
-
+            print(f"Car to update: f{cart_to_update}")
             for cart in self.carts:
-
                 if target_flag == "unload_ship":
-                    if cart["Cart_name"] == cart_to_update["Cart_name"]:
+                    if cart["Cart_name"] == cart_to_update["Cart_name"] and (self.ship_remainingContainersNo > 0):
                         cart["Status"] = unload  # Mark the cart as updated
-                        cart["Target"] = self.containers[-1][
-                            1
-                        ]  # Set the Target from the last container's value
+                        cart["Target"] = self.containers[-1]['cont_target']  # Set the Target from the last container's value
                         self.ship_remainingContainersNo -= 1
+                        print(self.ship_remainingContainersNo)
+                        print("")
                         if occupied_fields[cart["Target"]]:
                             if not occupied_fields[(cart["Target"] + 1)]:
                                 cart["Position"] = cart["Target"] + 1
-                            elif not occupied_fields[PortPositions.ST_LP1]:
+                            elif not occupied_fields[PortPositions.ST_LP1.value]:
                                 cart["Position"] = PortPositions.ST_LP1.value
-                            elif not occupied_fields[PortPositions.ST_LP2]:
+                            elif not occupied_fields[PortPositions.ST_LP2.value]:
                                 cart["Position"] = PortPositions.ST_LP2.value
-                            elif not occupied_fields[PortPositions.ST_WAITING]:
+                            elif not occupied_fields[PortPositions.ST_WAITING.value]:
                                 cart["Position"] = PortPositions.ST_WAITING.value
                         else:
                             cart["Position"] = cart["Target"]
@@ -260,7 +263,7 @@ class Controller:
                         cart["Status"] = unload  # Mark the cart as updated
                         if unload == True:
                             self.storage_containers -= 1
-                            cart["Target"] = self.storage_containers_info[-1][1]
+                            cart["Target"] = self.storage_containers_info[-1]['cont_target']
                         else:
                             if self.ship:
                                 cart["Target"] = PortPositions.SHIP_WAITIMG.value
@@ -280,95 +283,156 @@ class Controller:
                     )
 
     def update_containers_status(self):
+        # if len(self.cranes) == cfg.numberOfCranes:
+        #     for existing_crane in self.cranes:
+        #         crane_port_1 = (
+        #             1
+        #             if (
+        #                 existing_crane["Crane_name"] == CRANE_1
+        #                 and existing_crane["Status"] == True
+        #             )
+        #             else 0
+        #         )
+        #         crane_port_2 = (
+        #             1
+        #             if (
+        #                 existing_crane["Crane_name"] == CRANE_2
+        #                 and existing_crane["Status"] == True
+        #             )
+        #             else 0
+        #         )
+        #         crane_port_3 = (
+        #             1
+        #             if (
+        #                 existing_crane["Crane_name"] == CRANE_3
+        #                 and existing_crane["Status"] == True
+        #             )
+        #             else 0
+        #         )
+        #         crane_port_4 = (
+        #             1
+        #             if (
+        #                 existing_crane["Crane_name"] == CRANE_4
+        #                 and existing_crane["Status"] == True
+        #             )
+        #             else 0
+        #         )
+        #         crane_port_5 = (
+        #             1
+        #             if (
+        #                 existing_crane["Crane_name"] == CRANE_5
+        #                 and existing_crane["Status"] == True
+        #             )
+        #             else 0
+        #         )
+        #         crane_port_6 = (
+        #             1
+        #             if (
+        #                 existing_crane["Crane_name"] == CRANE_6
+        #                 and existing_crane["Status"] == True
+        #             )
+        #             else 0
+        #         )
+
+        #     unload_ship = "unload_ship"
+        #     load_transit = "load_transit"
+        #     do_storage = "do_storage"
+        #     if crane_port_1:
+        #         self.move_container(
+        #             {PortPositions.SHIP_LP1, PortPositions.SHIP_LP2}, True, unload_ship
+        #         )
+        #         print("IM here")
+        #     if crane_port_2:
+        #         self.move_container(
+        #             {PortPositions.SHIP_LP2, PortPositions.SHIP_LP3}, True, unload_ship
+        #         )
+        #     if crane_port_3:
+        #         self.move_container(
+        #             {PortPositions.AFRICA_LP, PortPositions.EUROPA_LP},
+        #             False,
+        #             load_transit,
+        #         )
+        #     if crane_port_4:
+        #         self.move_container(
+        #             {PortPositions.EUROPA_LP, PortPositions.AMERICA_LP},
+        #             False,
+        #             load_transit,
+        #         )
+        #     if crane_port_5:
+        #         self.move_container(
+        #             {PortPositions.AMERICA_LP, PortPositions.ASIA_LP},
+        #             False,
+        #             load_transit,
+        #         )
+        #     if (
+        #         crane_port_6
+        #         and self.ship
+        #         and (self.storage_containers) < cfg.containers_capacities[-2]
+        #     ):
+        #         self.move_container(
+        #             {PortPositions.ST_LP1, PortPositions.ST_LP2}, False, do_storage
+        #         )
+        #     elif crane_port_6 and not self.ship and (self.containers) > 0:
+        #         self.move_container(
+        #             {PortPositions.ST_LP1, PortPositions.ST_LP2}, True, do_storage
+        #         )
+
         if len(self.cranes) == cfg.numberOfCranes:
+            # Tworzymy słownik, który przechowa statusy dla każdego dźwigu
+            crane_ports = {
+                "CRANE_1": 0,
+                "CRANE_2": 0,
+                "CRANE_3": 0,
+                "CRANE_4": 0,
+                "CRANE_5": 0,
+                "CRANE_6": 0
+            }
+
+            # Iteracja przez wszystkie dźwigi
             for existing_crane in self.cranes:
-                crane_port_1 = (
-                    1
-                    if (
-                        existing_crane["Crane_name"] == CRANE_1
-                        and existing_crane["Status"] == True
-                    )
-                    else 0
-                )
-                crane_port_2 = (
-                    1
-                    if (
-                        existing_crane["Crane_name"] == CRANE_2
-                        and existing_crane["Status"] == True
-                    )
-                    else 0
-                )
-                crane_port_3 = (
-                    1
-                    if (
-                        existing_crane["Crane_name"] == CRANE_3
-                        and existing_crane["Status"] == True
-                    )
-                    else 0
-                )
-                crane_port_4 = (
-                    1
-                    if (
-                        existing_crane["Crane_name"] == CRANE_4
-                        and existing_crane["Status"] == True
-                    )
-                    else 0
-                )
-                crane_port_5 = (
-                    1
-                    if (
-                        existing_crane["Crane_name"] == CRANE_5
-                        and existing_crane["Status"] == True
-                    )
-                    else 0
-                )
-                crane_port_6 = (
-                    1
-                    if (
-                        existing_crane["Crane_name"] == CRANE_6
-                        and existing_crane["Status"] == True
-                    )
-                    else 0
-                )
+                if existing_crane["Status"] == True:
+                    crane_name = existing_crane["Crane_name"]
+                    if crane_name in crane_ports:
+                        crane_ports[crane_name] = 1
 
             unload_ship = "unload_ship"
             load_transit = "load_transit"
             do_storage = "do_storage"
-            if crane_port_1:
+            if crane_ports["CRANE_1"]:
                 self.move_container(
-                    {PortPositions.SHIP_LP1, PortPositions.SHIP_LP2}, True, unload_ship
+                    {PortPositions.SHIP_LP1.value, PortPositions.SHIP_LP2.value}, True, unload_ship
                 )
-            if crane_port_2:
+            if crane_ports["CRANE_2"]:
                 self.move_container(
                     {PortPositions.SHIP_LP2, PortPositions.SHIP_LP3}, True, unload_ship
                 )
-            if crane_port_3:
+            if crane_ports["CRANE_3"]:
                 self.move_container(
                     {PortPositions.AFRICA_LP, PortPositions.EUROPA_LP},
                     False,
                     load_transit,
                 )
-            if crane_port_4:
+            if crane_ports["CRANE_4"]:
                 self.move_container(
                     {PortPositions.EUROPA_LP, PortPositions.AMERICA_LP},
                     False,
                     load_transit,
                 )
-            if crane_port_5:
+            if crane_ports["CRANE_5"]:
                 self.move_container(
                     {PortPositions.AMERICA_LP, PortPositions.ASIA_LP},
                     False,
                     load_transit,
                 )
             if (
-                crane_port_6
+                crane_ports["CRANE_6"]
                 and self.ship
                 and (self.storage_containers) < cfg.containers_capacities[-2]
             ):
                 self.move_container(
                     {PortPositions.ST_LP1, PortPositions.ST_LP2}, False, do_storage
                 )
-            elif crane_port_6 and not self.ship and (self.containers) > 0:
+            elif crane_ports["CRANE_6"] and not self.ship and (self.storage_containers) > 0:
                 self.move_container(
                     {PortPositions.ST_LP1, PortPositions.ST_LP2}, True, do_storage
                 )
@@ -391,11 +455,11 @@ class Controller:
                     if cart["Target"] < PortPositions.SHIP_WAITIMG.value:
                         if not occupied_fields[(cart["Target"] + 1)]:
                             cart["Position"] = cart["Target"] + 1
-                        elif not occupied_fields[PortPositions.ST_LP1]:
+                        elif not occupied_fields[PortPositions.ST_LP1.value]:
                             cart["Position"] = PortPositions.ST_LP1.value
-                        elif not occupied_fields[PortPositions.ST_LP2]:
+                        elif not occupied_fields[PortPositions.ST_LP2.value]:
                             cart["Position"] = PortPositions.ST_LP2.value
-                        elif not occupied_fields[PortPositions.ST_WAITING]:
+                        elif not occupied_fields[PortPositions.ST_WAITING.value]:
                             cart["Position"] = PortPositions.ST_WAITING.value
                 else:
                     cart["Position"] = cart["Target"]
@@ -420,6 +484,8 @@ class Controller:
                     elif not occupied_fields[PortPositions.ST_LP2.value]:
                         cart["Position"] = PortPositions.ST_LP2.value
                 if cart["Position"] == PortPositions.SHIP_WAITIMG.value:
+                    print(f"cart {cart}")
+                    print(f"self ship {self.ship}")
                     if not occupied_fields[PortPositions.SHIP_LP1.value]:
                         cart["Position"] = PortPositions.SHIP_LP1.value
                     elif not occupied_fields[PortPositions.SHIP_LP2.value]:
@@ -430,6 +496,7 @@ class Controller:
     def check_port_status(self):
 
         if self.ship_remainingContainersNo == 0 and self.ship:
+            print("im hero")
             self.ship = False
             self.ship_message_flag = True
 
@@ -673,7 +740,9 @@ class Controller:
             print(f"ACK received for")
 
     def generate_messages(self):
+        print(f"im here to:{self.ship_message_flag} ")
         if self.ship_message_flag:
+            print("ship message sent")
             self.generate_ship_message()
         if self.storage_yard_flag:
             self.generate_storage_yard_message()

@@ -65,7 +65,8 @@ class WorldSimulator:
     def init_world(self):
 
         self.ship.isInPort = True
-        self.ship.remainingContainersNo = rnd.randint(0, cfg.containers_capacities[-1])
+        # self.ship.remainingContainersNo = rnd.randint(0, cfg.containers_capacities[-1])
+        self.ship.remainingContainersNo = 5
 
         for i in range(cfg.numberOfCarts):
             cart = port.Cart()
@@ -85,6 +86,7 @@ class WorldSimulator:
             crane = port.Crane()
             crane.name = f"CRANE_{i+1}"
             crane.isReady = True
+            print(crane)
             self.cranes.append(crane)
 
         self.storage_yard.containersNo = 0
@@ -356,15 +358,20 @@ class WorldSimulator:
         # while not self.ship.isInPort:
         if not self.ship.isInPort:
             self.ship_delay -= 1
+            print(f"Ship delay: {self.ship_delay}")
             if self.ship_delay <= 0:
                 self.ship.isInPort = True
+                # self.ship.remainingContainersNo = rnd.randint(0, cfg.containers_capacities[-1])
+                self.ship.remainingContainersNo = 5
                 self.ship_message_flag = True
                 self.ship_delay = SHIP_DELAY
 
         for crane in self.cranes:
-            number = int(crane.name.split("_")[1]) - 1
+            number = int(crane.name.split("_")[1]) -1
             if not crane.isReady:
-                print(number)
+                print(f"Crane {number+1}")
+                print(self.cranes_delays[number])
+                print("")
                 self.cranes_delays[number] -= 1
                 if self.cranes_delays[number] <= 0:
                     crane.isReady = True  # Mark the crane as ready
