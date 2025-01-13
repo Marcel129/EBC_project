@@ -61,10 +61,16 @@ class Port:
                 )
 
     def receiveData(self):
-        self.portData.ParseFromString(self.socket.recv())
+        raw_message = self.socket.recv_multipart()
+        # Topic to pierwszy element wiadomości
+        topic = raw_message[0].decode()  # Decode topic
+        # Message data to drugi element wiadomości
+        message_data = raw_message[1]
+        # Ensure message data is not empty before attempting to parse
+        self.portData.ParseFromString(message_data)
 
     def updatePortState(self):
-        if not self.portData.ship.isInPort:
+        if self.portData.ship.isInPort:
             dpg.show_item(item=f"{cfg.containers[5]}_image")
             dpg.show_item(item=f"{cfg.containers[5]}_ind")
         else:

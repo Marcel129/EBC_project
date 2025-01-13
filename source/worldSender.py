@@ -11,6 +11,9 @@ from controller import PortPositions
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
+CRANE_DELAY = 10  # seconds
+SHIP_DELAY = 10  # seconds
+
 transitPointsIDs = [
     port.TransitPoint.Port_ID.AFRICA,
     port.TransitPoint.Port_ID.EUROPA,
@@ -18,18 +21,29 @@ transitPointsIDs = [
     port.TransitPoint.Port_ID.AMERICA,
 ]
 
+
 class WorldSimulator:
     def __init__(self, publisher_ip="localhost", publisher_port="5555"):
-        #publisher to controller
+        # publisher to controller
         self.zmq_context = zmq.Context()
         self.publisher = self.zmq_context.socket(zmq.PUB)
         self.publisher.bind(f"tcp://{publisher_ip}:{publisher_port}")  # Use bind()
-        #receiver from controller
+        # receiver from controller
         self.receiver_IPaddress = "localhost"
         self.receiver_port = "2000"
         self.receiver = self.zmq_context.socket(zmq.SUB)
         self.receiver.connect(f"tcp://{self.receiver_IPaddress}:{self.receiver_port}")
         self.receiver.setsockopt(zmq.SUBSCRIBE, b"")
+
+        # Receiver Socket for ACKs (REQ)
+        self.ack_receiver = self.zmq_context.socket(zmq.REQ)
+        self.ack_receiver.connect(
+            "tcp://127.0.0.1:5556"
+        )  # Connect to subscriber's ACK endpoi
+
+        # ACK Socket (REP)
+        self.ack_socket = self.zmq_context.socket(zmq.REP)
+        self.ack_socket.bind("tcp://127.0.0.1:5560")  # Listen for ACK requests
 
         self.ship = port.Ship()
         self.cranes = []
@@ -38,15 +52,15 @@ class WorldSimulator:
         self.transit_points = []
         self.init_world()
 
-        #flags for generating messages
+        # flags for generating messages
         self.ship_message_flag = True
-        self.carts_message_flag = True
-        self.cranes_message_flag = True
-        self.transit_points_flag = True
+        self.carts_message_flag = [True for __ in range(cfg.numberOfCarts)]
+        self.cranes_message_flag = [True for __ in range(cfg.numberOfCranes)]
+        self.transit_point_flag = [True for __ in range(4)]
         self.storage_yard_flag = True
 
-        self.ship_delay = 1000
-        self.cranes_delays = [1000 for __ in range(6)]
+        self.ship_delay = SHIP_DELAY
+        self.cranes_delays = [CRANE_DELAY for __ in range(cfg.numberOfCranes)]
 
     def init_world(self):
 
@@ -55,24 +69,24 @@ class WorldSimulator:
 
         for i in range(cfg.numberOfCarts):
             cart = port.Cart()
-            cart.name = f"CART_{i}"
+            cart.name = f"CART_{i+1}"
             cart.withContainer = False
             cart.cartPos = PortPositions.SHIP_WAITIMG.value
             cart.targetID = PortPositions.SHIP_WAITIMG.value
             self.carts.append(cart)
-        
+
         for id in transitPointsIDs:
             transit_point = port.TransitPoint()
             transit_point.ID = id
             transit_point.containersNo = 0
             self.transit_points.append(transit_point)
-        
+
         for i in range(cfg.numberOfCranes):
             crane = port.Crane()
-            crane.name = f"CRANE_{i}"
+            crane.name = f"CRANE_{i+1}"
             crane.isReady = True
             self.cranes.append(crane)
-        
+
         self.storage_yard.containersNo = 0
 
     def generate_ship_message(self):
@@ -85,6 +99,12 @@ class WorldSimulator:
         self.publisher.send_multipart([topic.encode(), self.ship.SerializeToString()])
         logging.info(f"Sent Ship message: {self.ship}")
 
+        # Wait for acknowledgment
+        self.ack_receiver.send_string("ACK_REQUEST")
+        ack = self.ack_receiver.recv_string()
+        if ack == "ACK":
+            self.ship_message_flag = False
+            print(f"ACK received for")
 
     def generate_crane_message(self):
         """
@@ -98,13 +118,21 @@ class WorldSimulator:
         #     self.publisher.send_multipart([topic.encode(), crane.SerializeToString()])
         #     # self.publisher.send(crane.SerializeToString())
         #     logging.info(f"Sent Crane message: {crane}")
-        
-        for crane in self.cranes:
-            topic = "crane"
-            self.publisher.send_multipart([topic.encode(), crane.SerializeToString()])
-            # self.publisher.send(crane.SerializeToString())
-            logging.info(f"Sent Crane message: {crane}")
+        for i, crane in enumerate(self.cranes):
+            if self.cranes_message_flag[i] == True:
+                topic = "crane"
+                self.publisher.send_multipart(
+                    [topic.encode(), crane.SerializeToString()]
+                )
+                # self.publisher.send(crane.SerializeToString())
+                logging.info(f"Sent Crane message: {crane}")
 
+                # Wait for acknowledgment
+                self.ack_receiver.send_string("ACK_REQUEST")
+                ack = self.ack_receiver.recv_string()
+                if ack == "ACK":
+                    self.cranes_message_flag[i] = False
+                    print(f"ACK received for")
 
     def generate_cart_message(self):
         """
@@ -120,12 +148,21 @@ class WorldSimulator:
         #     topic = "cart"
         #     self.publisher.send_multipart([topic.encode(), cart.SerializeToString()])
         #     logging.info(f"Sent Cart message: {cart}")
-        
-        for cart in self.carts:
-            topic = "cart"
-            self.publisher.send_multipart([topic.encode(), cart.SerializeToString()])
-            # self.publisher.send(crane.SerializeToString())
-            logging.info(f"Sent Cart message: {cart}")
+
+        for i, cart in enumerate(self.carts):
+            if self.carts_message_flag[i] == True:
+                topic = "cart"
+                self.publisher.send_multipart(
+                    [topic.encode(), cart.SerializeToString()]
+                )
+                # self.publisher.send(crane.SerializeToString())
+                logging.info(f"Sent Cart message: {cart}")
+                # Wait for acknowledgment
+                self.ack_receiver.send_string("ACK_REQUEST")
+                ack = self.ack_receiver.recv_string()
+                if ack == "ACK":
+                    self.carts_message_flag[i] = False
+                    print(f"ACK received for")
 
     def generate_transit_point_message(self):
         """
@@ -134,17 +171,27 @@ class WorldSimulator:
         # for id in transitPointsIDs:
         #     transit_point = port.TransitPoint()
         #     transit_point.ID = id
-        #     transit_point.containersNo = 0 
+        #     transit_point.containersNo = 0
         #     # self.publisher.send(transit_point.SerializeToString())
         #     topic = "transit_point"
         #     self.publisher.send_multipart([topic.encode(), transit_point.SerializeToString()])
         #     logging.info(f"Sent TransitPoint message: {transit_point}")
-        
-        for transit_point in self.transit_points:
-            topic = "transit_point"
-            self.publisher.send_multipart([topic.encode(), transit_point.SerializeToString()])
-            # self.publisher.send(crane.SerializeToString())
-            logging.info(f"Sent TransitPoint message: {transit_point}")
+
+        for i, transit_point in enumerate(self.transit_points):
+            if self.transit_point_flag[i] == True:
+                topic = "transit_point"
+                self.publisher.send_multipart(
+                    [topic.encode(), transit_point.SerializeToString()]
+                )
+                # self.publisher.send(crane.SerializeToString())
+                logging.info(f"Sent TransitPoint message: {transit_point}")
+
+                # Wait for acknowledgment
+                self.ack_receiver.send_string("ACK_REQUEST")
+                ack = self.ack_receiver.recv_string()
+                if ack == "ACK":
+                    self.transit_point_flag[i] = False
+                    print(f"ACK received for")
 
     def generate_storage_yard_message(self):
         """
@@ -154,119 +201,183 @@ class WorldSimulator:
         # storage_yard.containersNo = rnd.randint(0, 500)
         # # self.publisher.send(storage_yard.SerializeToString())
         topic = "storage_yard"
-        self.publisher.send_multipart([topic.encode(), self.storage_yard.SerializeToString()])
+        self.publisher.send_multipart(
+            [topic.encode(), self.storage_yard.SerializeToString()]
+        )
         logging.info(f"Sent StorageYard message: {self.storage_yard}")
- 
-    def process_message(self):
-            try:
-                raw_message = self.receiver.recv_multipart()
-                # Topic to pierwszy element wiadomości
-                topic = raw_message[0].decode()  # Decode topic
-                # Message data to drugi element wiadomości
-                message_data = raw_message[1]
-                # Ensure message data is not empty before attempting to parse
-                if not message_data:
-                    logging.warning(f"Empty message data for topic: {topic}")
-                else:
-                    # Process based on topic
-                    if topic == "ship":
-                        msg = port.Ship()
-                        try:
-                            msg.ParseFromString(message_data)
-                            self.ship.isInPort = msg.isInPort
-                            self.ship.remainingContainersNo = msg.remainingContainersNo
-                            logging.info("Received Ship message.")
-                        except Exception as e:
-                            logging.error(f"Error processing Ship message: {e}, topic: {topic}")
-                    elif topic == "cart":
-                        msg = port.Cart()
-                        try:
-                            msg.ParseFromString(message_data)
-                            for transit_point in self.carts:
-                                if transit_point.name == msg.name:
-                                    transit_point.withContainer = msg.withContainer
-                                    transit_point.cartPos = msg.cartPos
-                                    transit_point.targetID = msg.targetID
-                                    logging.info(f"Updated Cart: {transit_point.name}")
-                                    break
-                            else:
-                                logging.warning(f"Cart with name {msg.name} not found.")
-                        except Exception as e:
-                            logging.error(f"Error processing Cart message: {e}, topic: {topic}")
-                    elif topic == "crane":
-                        msg = port.Crane()
-                        try:
-                            msg.ParseFromString(message_data)
-                            for transit_point in self.cranes:
-                                if transit_point.name == msg.name:
-                                    transit_point.isReady = msg.isReady
-                                    logging.info(f"Updated Crane: {transit_point.name}")
-                                    break
-                            else:
-                                logging.warning(f"Crane with name {msg.name} not found.")
-                        except Exception as e:
-                            logging.error(f"Error processing Crane message: {e}, topic: {topic}")
-                    elif topic == "storage_yard":
-                        msg = port.StorageYard()
-                        try:
-                            msg.ParseFromString(message_data)
-                            self.storage_yard.containersNo = msg.containersNo
-                            logging.info("Received StorageYard message.")
-                        except Exception as e:
-                            logging.error(f"Error processing StorageYard message: {e}, topic: {topic}")
-                    elif topic == "transit_point":
-                        msg = port.TransitPoint()
-                        try:
-                            msg.ParseFromString(message_data)
-                            for transit_point in self.transit_points:
-                                if transit_point.ID == msg.ID:
-                                    transit_point.containersNo = msg.containersNo
-                                    logging.info(f"Updated Cart: {transit_point.ID}")
-                                    break
-                            else:
-                                logging.warning(f"Cart with name {msg.ID} not found.")
-                        except Exception as e:
-                            logging.error(f"Error processing TransitPoint message: {e}, topic: {topic}")
-                    else:
-                        logging.warning(f"Unrecognized topic: {topic}")
-            except Exception as e:
-                logging.error(f"Error processing message: {e}", exc_info=True)
 
+        # Wait for acknowledgment
+        self.ack_receiver.send_string("ACK_REQUEST")
+        ack = self.ack_receiver.recv_string()
+        if ack == "ACK":
+            self.storage_yard_flag = False
+            print(f"ACK received for")
+
+    def process_message(self):
+        try:
+            raw_message = self.receiver.recv_multipart()
+            # Topic to pierwszy element wiadomości
+            topic = raw_message[0].decode()  # Decode topic
+            # Message data to drugi element wiadomości
+            message_data = raw_message[1]
+            # Ensure message data is not empty before attempting to parse
+            if not message_data:
+                logging.warning(f"Empty message data for topic: {topic}")
+            else:
+                # Process based on topic
+                if topic == "ship":
+                    msg = port.Ship()
+                    try:
+                        msg.ParseFromString(message_data)
+                        self.ship.isInPort = msg.isInPort
+                        self.ship.remainingContainersNo = msg.remainingContainersNo
+                        logging.info("Received Ship message.")
+                        ack_request = self.ack_socket.recv_string()
+                        if ack_request == "ACK_REQUEST":
+                            self.ack_socket.send_string("ACK")
+                            print("ACK sent.")
+                    except Exception as e:
+                        logging.error(
+                            f"Error processing Ship message: {e}, topic: {topic}"
+                        )
+                elif topic == "cart":
+                    msg = port.Cart()
+                    try:
+                        msg.ParseFromString(message_data)
+                        for cart in self.carts:
+                            if cart.name == msg.name:
+                                cart.withContainer = msg.withContainer
+                                cart.cartPos = msg.cartPos
+                                cart.targetID = msg.targetID
+                                logging.info(f"Updated Cart: {cart.name}")
+                                ack_request = self.ack_socket.recv_string()
+                                if ack_request == "ACK_REQUEST":
+                                    self.ack_socket.send_string("ACK")
+                                    print("ACK sent.")
+                                break
+                        else:
+                            logging.warning(f"Cart with name {msg.name} not found.")
+                    except Exception as e:
+                        logging.error(
+                            f"Error processing Cart message: {e}, topic: {topic}"
+                        )
+                elif topic == "crane":
+                    msg = port.Crane()
+                    try:
+                        msg.ParseFromString(message_data)
+                        for crane in self.cranes:
+                            if crane.name == msg.name:
+                                crane.isReady = msg.isReady
+                                logging.info(f"Updated Crane: {crane.name}")
+                                ack_request = self.ack_socket.recv_string()
+                                if ack_request == "ACK_REQUEST":
+                                    self.ack_socket.send_string("ACK")
+                                    print("ACK sent.")
+                                break
+                        else:
+                            logging.warning(f"Crane with name {msg.name} not found.")
+                    except Exception as e:
+                        logging.error(
+                            f"Error processing Crane message: {e}, topic: {topic}"
+                        )
+                elif topic == "storage_yard":
+                    msg = port.StorageYard()
+                    try:
+                        msg.ParseFromString(message_data)
+                        self.storage_yard.containersNo = msg.containersNo
+                        logging.info("Received StorageYard message.")
+                        ack_request = self.ack_socket.recv_string()
+                        if ack_request == "ACK_REQUEST":
+                            self.ack_socket.send_string("ACK")
+                            print("ACK sent.")
+                    except Exception as e:
+                        logging.error(
+                            f"Error processing StorageYard message: {e}, topic: {topic}"
+                        )
+                elif topic == "transit_point":
+                    msg = port.TransitPoint()
+                    try:
+                        msg.ParseFromString(message_data)
+                        for transit_point in self.transit_points:
+                            if transit_point.ID == msg.ID:
+                                transit_point.containersNo = msg.containersNo
+                                logging.info(f"Updated Cart: {transit_point.ID}")
+                                ack_request = self.ack_socket.recv_string()
+                                if ack_request == "ACK_REQUEST":
+                                    self.ack_socket.send_string("ACK")
+                                    print("ACK sent.")
+                                break
+                        else:
+                            logging.warning(f"Cart with name {msg.ID} not found.")
+                    except Exception as e:
+                        logging.error(
+                            f"Error processing TransitPoint message: {e}, topic: {topic}"
+                        )
+                else:
+                    pass
+        except Exception as e:
+            logging.error(f"Error processing message: {e}", exc_info=True)
+
+    # def generate_messages(self):
+    #     if self.ship_message_flag:
+    #         self.generate_ship_message()
+    #         self.ship_message_flag = False
+    #     if self.storage_yard_flag:
+    #         self.generate_storage_yard_message()
+    #         self.storage_yard_flag = False
+    #     if self.transit_point_flag:
+    #         self.generate_transit_point_message()
+    #         self.transit_point_flag = False
+    #     if self.carts_message_flag:
+    #         self.generate_cart_message()
+    #         self.carts_message_flag = False
+    #     if self.cranes_message_flag:
+    #         self.generate_crane_message()
+    #         self.cranes_message_flag = False
 
     def generate_messages(self):
-        if self.ship_message_flag: 
-            self.generate_ship_message() 
-            self.ship_message_flag = False 
-        if self.storage_yard_flag: 
+        """
+        Generate and send messages for various topics, ensuring acknowledgment before resetting flags.
+        """
+
+        # In the generate_messages method
+        if self.ship_message_flag:
+            self.generate_ship_message()
+        if self.storage_yard_flag:
             self.generate_storage_yard_message()
-            self.storage_yard_flag = False   
-        if self.transit_point_flag: 
+        if self.transit_point_flag:
             self.generate_transit_point_message()
-            self.transit_point_flag = False   
-        if self.carts_message_flag: 
-            self.generate_cart_message() 
-            self.carts_message_flag = False  
-        if self.cranes_message_flag: 
+        if any(self.cranes_message_flag):  # Check if any crane requires a message
             self.generate_crane_message()
-            self.cranes_message_flag = False   
-    
+        if any(self.carts_message_flag):  # Check if any cart requires a message
+            self.generate_cart_message()
+
     def process_events(self):
-        
-        while not self.ship.isInPort:
-            self.ship_delay-=1
-            if self.ship_delay<=0:
+        # while not self.ship.isInPort:
+        if not self.ship.isInPort:
+            self.ship_delay -= 1
+            if self.ship_delay <= 0:
                 self.ship.isInPort = True
                 self.ship_message_flag = True
+                self.ship_delay = SHIP_DELAY
 
         for crane in self.cranes:
-            number = int(crane.name.split('_')[1])
-            while not crane.isReady:
-                self.cranes_delays[number]-=1
-                if self.cranes_delays[number]<=0:
-                    crane.isReady = True
-                    self.cranes_message_flag = True
+            number = int(crane.name.split("_")[1]) - 1
+            if not crane.isReady:
+                print(number)
+                self.cranes_delays[number] -= 1
+                if self.cranes_delays[number] <= 0:
+                    crane.isReady = True  # Mark the crane as ready
+                    self.cranes_message_flag[number] = (
+                        True  # Set the corresponding message flag
+                    )
+                    self.cranes_delays[number] = CRANE_DELAY
+            # while not crane.isReady:
+            #     self.cranes_delays[number] -= 1
+            #     if self.cranes_delays[number] <= 0:
+            #         crane.isReady = True
+            #         self.cranes_message_flag = True
 
-                
     def simulate(self):
         """
         Main simulation loop.
@@ -277,6 +388,22 @@ class WorldSimulator:
             try:
                 self.process_message()
                 self.process_events()
+                # for _ in range(5):
+                #     # if self.ship_message_flag:
+                #     self.generate_ship_message()
+                #     self.ship_message_flag = False
+                #     # if self.storage_yard_flag:
+                #     self.generate_storage_yard_message()
+                #     self.storage_yard_flag = False
+                #     # if self.transit_point_flag:
+                #     self.generate_transit_point_message()
+                #     self.transit_point_flag = False
+                #     # if self.carts_message_flag:
+                #     self.generate_cart_message()
+                #     self.carts_message_flag = False
+                #     # if self.cranes_message_flag:
+                #     self.generate_crane_message()
+                #     self.cranes_message_flag = False
                 self.generate_messages()
             except Exception as e:
                 logging.error(f"Error during simulation: {e}", exc_info=True)
