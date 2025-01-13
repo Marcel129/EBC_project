@@ -12,7 +12,7 @@ import zmq
 import zmq.asyncio
 
 # Configure logging
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.INFO)
 # logging.propagate = False
 # CRANE_1 = "SHIP_C1"  # UPPER
 # CRANE_2 = "SHIP_C2"  # LOWER
@@ -108,6 +108,7 @@ class Controller:
         self.cranes_message_flag = [False for __ in range(cfg.numberOfCranes)]
         self.transit_point_flag = [False for __ in range(4)]
         self.storage_yard_flag = False
+        self.gui_message_flag = False
 
     def recieved_ship_status(self, msg):
 
@@ -224,15 +225,14 @@ class Controller:
                 )
                 for position in PortPositions
             ]
-            print(f"Car to update: f{cart_to_update}")
+            # print(f"Car to update: f{cart_to_update}")
             for cart in self.carts:
                 if target_flag == "unload_ship":
-                    if cart["Cart_name"] == cart_to_update["Cart_name"] and (self.ship_remainingContainersNo > 0):
+                    if cart["Cart_name"] == cart_to_update["Cart_name"] and (self.ship_remainingContainersNo > 0) and self.containers and unload:
                         cart["Status"] = unload  # Mark the cart as updated
                         cart["Target"] = self.containers[-1]['cont_target']  # Set the Target from the last container's value
                         self.ship_remainingContainersNo -= 1
-                        print(self.ship_remainingContainersNo)
-                        print("")
+                        self.containers.pop()
                         if occupied_fields[cart["Target"]]:
                             if not occupied_fields[(cart["Target"] + 1)]:
                                 cart["Position"] = cart["Target"] + 1
@@ -252,6 +252,7 @@ class Controller:
                             if existing_trans_point["Port_ID"] == cart["Position"]:
                                 cart["Status"] = unload  # Mark the cart as updated
                                 existing_trans_point["containersNo"] += 1
+                                print(f"Transit {existing_trans_point}")
                                 if self.ship:
                                     cart["Target"] = PortPositions.SHIP_WAITIMG.value
                                 else:
@@ -261,26 +262,22 @@ class Controller:
                 elif target_flag == "do_storage":
                     if cart["Cart_name"] == cart_to_update["Cart_name"]:
                         cart["Status"] = unload  # Mark the cart as updated
-                        if unload == True:
+                        if unload == True and (self.storage_containers > 0):
                             self.storage_containers -= 1
                             cart["Target"] = self.storage_containers_info[-1]['cont_target']
-                        else:
+                            self.storage_containers_info.pop()
+                        elif not unload and (self.storage_containers < cfg.containers_capacities[-2]):
+                            self.storage_containers_info.append(
+                                {"cont_numb": 0, "cont_target": cart_to_update["Target"]}
+                            )
+                            self.storage_containers += 1
                             if self.ship:
                                 cart["Target"] = PortPositions.SHIP_WAITIMG.value
                             else:
                                 cart["Target"] = PortPositions.ST_WAITING.value
-                            self.storage_containers += 1
                         break  # We found and updated the cart, no need to continue looping
 
-            if self.containers and unload:
-                self.containers.pop()
-            if target_flag == "do_storage":
-                if self.storage_containers and unload:
-                    self.containers.pop()
-                elif not unload:
-                    self.storage_containers.append(
-                        {"cont_numb": 0, "cont_target": cart_to_update["Target"]}
-                    )
+
 
     def update_containers_status(self):
         # if len(self.cranes) == cfg.numberOfCranes:
@@ -404,37 +401,36 @@ class Controller:
                 )
             if crane_ports["CRANE_2"]:
                 self.move_container(
-                    {PortPositions.SHIP_LP2, PortPositions.SHIP_LP3}, True, unload_ship
+                    {PortPositions.SHIP_LP2.value, PortPositions.SHIP_LP3.value}, True, unload_ship
                 )
             if crane_ports["CRANE_3"]:
                 self.move_container(
-                    {PortPositions.AFRICA_LP, PortPositions.EUROPA_LP},
+                    {PortPositions.AFRICA_LP.value, PortPositions.EUROPA_LP.value},
                     False,
                     load_transit,
                 )
             if crane_ports["CRANE_4"]:
                 self.move_container(
-                    {PortPositions.EUROPA_LP, PortPositions.AMERICA_LP},
+                    {PortPositions.EUROPA_LP.value, PortPositions.AMERICA_LP.value},
                     False,
                     load_transit,
                 )
             if crane_ports["CRANE_5"]:
                 self.move_container(
-                    {PortPositions.AMERICA_LP, PortPositions.ASIA_LP},
+                    {PortPositions.AMERICA_LP.value, PortPositions.ASIA_LP.value},
                     False,
                     load_transit,
                 )
             if (
                 crane_ports["CRANE_6"]
                 and self.ship
-                and (self.storage_containers) < cfg.containers_capacities[-2]
             ):
                 self.move_container(
-                    {PortPositions.ST_LP1, PortPositions.ST_LP2}, False, do_storage
+                    {PortPositions.ST_LP1.value, PortPositions.ST_LP2.value}, False, do_storage
                 )
-            elif crane_ports["CRANE_6"] and not self.ship and (self.storage_containers) > 0:
+            elif crane_ports["CRANE_6"] and (not self.ship):
                 self.move_container(
-                    {PortPositions.ST_LP1, PortPositions.ST_LP2}, True, do_storage
+                    {PortPositions.ST_LP1.value, PortPositions.ST_LP2.value}, True, do_storage
                 )
 
     def move_cart(self):
@@ -632,6 +628,27 @@ class Controller:
         new_cart.cartPos = cart_data["Position"]
         new_cart.targetID = cart_data["Target"]
         logging.info(f"Added new cart {cart_data['Cart_name']} to PortState.")
+    
+    def add_transit_points_to_port_state(self, port_state, transit_data):
+        """
+        Add or update a cart in the PortState protobuf message.
+
+        Args:
+            port_state (port.PortState): The PortState protobuf message.
+            cart_data (dict): A dictionary with cart details (name, withContainer, cartPos, targetID).
+        """
+
+        # Check if the cart already exists
+        for existing_trans_point in port_state.transitPoints:
+            if existing_trans_point.ID == transit_data["Port_ID"]:
+                existing_trans_point.containersNo = transit_data["containersNo"]
+                return
+
+        # If the cart does not exist, add a new one
+        new_transit = port_state.transitPoints.add()
+        new_transit.ID = transit_data["Port_ID"]
+        new_transit.containersNo = transit_data["containersNo"]
+        logging.info(f"Added new transit {transit_data['Port_ID']} to PortState.")
 
     def generate_ship_message(self):
         """
@@ -755,26 +772,27 @@ class Controller:
 
     def send_port_state(self):
         while self.running:
-            # Serialize and send a Protobuf message
-            self.myPort.ship.isInPort = self.ship
-            self.myPort.ship.remainingContainersNo = self.ship_remainingContainersNo
-            # Iterate through self.carts and add/update each cart
-            for cart_data in self.carts:
-                self.add_cart_to_port_state(self.myPort, cart_data)
 
-            self.myPort.storageYard.containersNo = self.storage_containers
+            if len(self.carts) != cfg.numberOfCarts or len(self.cranes) != cfg.numberOfCranes or len(self.transit_points) != 4:
+                continue
+            else:
+                for cart_data in self.carts:
+                    self.add_cart_to_port_state(self.myPort, cart_data)
+                for existing_trans_point in self.transit_points:
+                    self.add_transit_points_to_port_state(self.myPort, existing_trans_point)
 
-            for existing_trans_point in self.transit_points:
-                new_point = self.myPort.transitPoints.add()
-                new_point.ID = existing_trans_point["Port_ID"]
-                new_point.containersNo = existing_trans_point["containersNo"]
-
-            topic = "port_state"
-            self.sender.send_multipart(
-                [topic.encode(), self.myPort.SerializeToString()]
-            )
-            logging.info(f"PortState sent: {self.myPort}")
-            time.sleep(1)
+                # Serialize and send a Protobuf message
+                self.myPort.ship.isInPort = self.ship
+                self.myPort.ship.remainingContainersNo = self.ship_remainingContainersNo
+                self.myPort.storageYard.containersNo = self.storage_containers
+                # Iterate through self.carts and add/update each car
+                
+                topic = "port_state"
+                self.sender.send_multipart(
+                    [topic.encode(), self.myPort.SerializeToString()]
+                )
+                logging.info(f"PortState sent: {self.myPort}")
+                time.sleep(1)
 
     def main_loop(self):
         """
