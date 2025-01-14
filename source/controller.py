@@ -218,7 +218,9 @@ class Controller:
             if cart["Position"] in position_set and cart["Status"] != unload
         ]  # Check if cart in correct place and if it doesn't have a container (unload)
         if len(tmp) == 1 or len(tmp) == 2:
-            cart_to_update = tmp[0]
+            # cart_to_update = tmp[0]
+            cart_to_update = random.choice(tmp) if len(tmp) == 2 else tmp[0]
+            # cart_to_update = tmp[1] if len(tmp) == 2 else tmp[0]
             occupied_fields = [
                 (
                     1
@@ -243,23 +245,24 @@ class Controller:
                         ]  # Set the Target from the last container's value
                         self.ship_remainingContainersNo -= 1
                         self.containers.pop()
-                        if occupied_fields[cart["Target"]]:
-                            if not occupied_fields[(cart["Target"] + 1)]:
-                                cart["Position"] = cart["Target"] + 1
-                            elif not occupied_fields[PortPositions.ST_LP1.value]:
-                                cart["Position"] = PortPositions.ST_LP1.value
-                            elif not occupied_fields[PortPositions.ST_LP2.value]:
-                                cart["Position"] = PortPositions.ST_LP2.value
-                            elif not occupied_fields[PortPositions.ST_WAITING.value]:
-                                cart["Position"] = PortPositions.ST_WAITING.value
-                        else:
-                            cart["Position"] = cart["Target"]
-                        break  # We found and updated the cart, no need to continue looping
+                        # if occupied_fields[cart["Target"]]:
+                        #     if not occupied_fields[(cart["Target"] + 1)]:
+                        #         cart["Position"] = cart["Target"] + 1
+                        #     elif not occupied_fields[PortPositions.ST_LP1.value]:
+                        #         cart["Position"] = PortPositions.ST_LP1.value
+                        #     elif not occupied_fields[PortPositions.ST_LP2.value]:
+                        #         cart["Position"] = PortPositions.ST_LP2.value
+                        #     elif not occupied_fields[PortPositions.ST_WAITING.value]:
+                        #         cart["Position"] = PortPositions.ST_WAITING.value
+                        # else:
+                        #     cart["Position"] = cart["Target"]
+                        # break  # We found and updated the cart, no need to continue looping
 
                 elif target_flag == "load_transit":
                     if cart["Cart_name"] == cart_to_update["Cart_name"]:
                         for existing_trans_point in self.transit_points:
                             if existing_trans_point["Port_ID"] == cart["Position"]:
+                                # print(f"Port id: {existing_trans_point['Port_ID']} cart position {cart['Position']}")
                                 cart["Status"] = unload  # Mark the cart as updated
                                 existing_trans_point["containersNo"] += 1
                                 print(f"Transit {existing_trans_point}")
@@ -284,7 +287,7 @@ class Controller:
                             self.storage_containers_info.append(
                                 {
                                     "cont_numb": 0,
-                                    "cont_target": cart_to_update["Target"],
+                                    "cont_target": cart["Target"],
                                 }
                             )
                             self.storage_containers += 1
@@ -329,6 +332,7 @@ class Controller:
                     unload_ship,
                 )
             if crane_ports["CRANE_3"]:
+                # print("Crane 3____________________")
                 self.move_container(
                     {PortPositions.AFRICA_LP.value, PortPositions.EUROPA_LP.value},
                     False,
@@ -336,13 +340,13 @@ class Controller:
                 )
             if crane_ports["CRANE_4"]:
                 self.move_container(
-                    {PortPositions.EUROPA_LP.value, PortPositions.AMERICA_LP.value},
+                    {PortPositions.EUROPA_LP.value, PortPositions.ASIA_LP.value},
                     False,
                     load_transit,
                 )
             if crane_ports["CRANE_5"]:
                 self.move_container(
-                    {PortPositions.AMERICA_LP.value, PortPositions.ASIA_LP.value},
+                    {PortPositions.ASIA_LP.value, PortPositions.AMERICA_LP.value},
                     False,
                     load_transit,
                 )
@@ -574,6 +578,7 @@ class Controller:
         for existing_trans_point in port_state.transitPoints:
             if existing_trans_point.ID == transit_data["Port_ID"]:
                 existing_trans_point.containersNo = transit_data["containersNo"]
+                # print(f"Sent transit point to gui: {existing_trans_point} id: {existing_trans_point.ID}")
                 return
 
         # If the cart does not exist, add a new one
@@ -773,7 +778,7 @@ class Controller:
     #     else:
     #         logging.warning("ACK timeout for StorageYard")
 
-    def send_with_ack(self, message, topic, flag_variable, timeout=1000):
+    def send_with_ack(self, message, topic, flag_variable, timeout=2000):
         """
         Helper function to send a message with acknowledgment.
         """
@@ -996,7 +1001,7 @@ class Controller:
                         )
                 else:
                     logging.warning(f"Unrecognized topic: {topic}")
-
+                
                 self.update_containers_status()
                 self.move_cart()
                 self.check_port_status()
@@ -1019,21 +1024,30 @@ class Controller:
 
 
 def generate_unique_elements(n: int, target_mod: int = 4) -> List[Dict[str, int]]:
+    # elements = []
+    # unique_numbers = set()
+
+    # for _ in range(n):
+    #     # Generate a unique number
+    #     while True:
+    #         cont_numb = random.randint(1, n + 1)  # Example range for unique numbers
+    #         if cont_numb not in unique_numbers:
+    #             unique_numbers.add(cont_numb)
+    #             break
+
+    #     # Calculate the target as a module of the unique number
+    #     cont_target = cont_numb % target_mod
+
+    #     # Add the unique dictionary to the list
+    #     elements.append({"cont_numb": cont_numb, "cont_target": cont_target})
+
     elements = []
-    unique_numbers = set()
-
-    for _ in range(n):
-        # Generate a unique number
-        while True:
-            cont_numb = random.randint(1, n + 1)  # Example range for unique numbers
-            if cont_numb not in unique_numbers:
-                unique_numbers.add(cont_numb)
-                break
-
-        # Calculate the target as a module of the unique number
-        cont_target = cont_numb % target_mod
-
-        # Add the unique dictionary to the list
+    
+    for i in range(n):
+        # Równomierne przypisanie identyfikatorów od 0 do n-1
+        cont_numb = i + 1  # Indeksy zaczynają się od 1
+        cont_target = cont_numb % target_mod  # Oblicz cel jako resztę z dzielenia
+        
         elements.append({"cont_numb": cont_numb, "cont_target": cont_target})
 
     return elements
