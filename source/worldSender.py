@@ -13,7 +13,7 @@ from controller import PortPositions
 logging.basicConfig(level=logging.WARNING)
 
 CRANE_DELAY = 1  # seconds
-SHIP_DELAY = 100  # seconds
+SHIP_DELAY = 20  # seconds
 
 transitPointsIDs = [
     port.TransitPoint.Port_ID.AFRICA,
@@ -67,7 +67,7 @@ class WorldSimulator:
 
         self.ship.isInPort = True
         # self.ship.remainingContainersNo = rnd.randint(0, cfg.containers_capacities[-1])
-        self.ship.remainingContainersNo = 8
+        self.ship.remainingContainersNo = 20
 
         for i in range(cfg.numberOfCarts):
             cart = port.Cart()
@@ -93,7 +93,7 @@ class WorldSimulator:
 
         self.storage_yard.containersNo = 0
 
-    def send_ack(self, poller, timeout_ms=2000):
+    def send_ack(self, poller, timeout_ms=100):
         """
         Sends an acknowledgment request and waits for the acknowledgment.
         """

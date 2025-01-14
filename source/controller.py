@@ -122,6 +122,17 @@ class Controller:
         logging.info(
             f"Ship status is updated. Current status: {self.ship}, no: {self.ship_remainingContainersNo}"
         )
+        # if not isinstance(msg, port.Ship):
+        #     logging.error("Received message is not of type 'Ship'.")
+        #     return
+        # print("get ship message from world")
+        # self.ship = msg.isInPort
+        # self.ship_remainingContainersNo = 1
+        # if self.ship_remainingContainersNo > 0:
+        #     self.containers.append({"cont_numb": 0, "cont_target": 6})
+        # logging.info(
+        #     f"Ship status is updated. Current status: {self.ship}, no: {self.ship_remainingContainersNo}"
+        # )
 
     def recieved_crane_status(self, msg):
 
@@ -778,7 +789,7 @@ class Controller:
     #     else:
     #         logging.warning("ACK timeout for StorageYard")
 
-    def send_with_ack(self, message, topic, flag_variable, timeout=2000):
+    def send_with_ack(self, message, topic, flag_variable, timeout=100):
         """
         Helper function to send a message with acknowledgment.
         """
@@ -1024,31 +1035,31 @@ class Controller:
 
 
 def generate_unique_elements(n: int, target_mod: int = 4) -> List[Dict[str, int]]:
-    # elements = []
-    # unique_numbers = set()
-
-    # for _ in range(n):
-    #     # Generate a unique number
-    #     while True:
-    #         cont_numb = random.randint(1, n + 1)  # Example range for unique numbers
-    #         if cont_numb not in unique_numbers:
-    #             unique_numbers.add(cont_numb)
-    #             break
-
-    #     # Calculate the target as a module of the unique number
-    #     cont_target = cont_numb % target_mod
-
-    #     # Add the unique dictionary to the list
-    #     elements.append({"cont_numb": cont_numb, "cont_target": cont_target})
-
     elements = []
-    
-    for i in range(n):
-        # Równomierne przypisanie identyfikatorów od 0 do n-1
-        cont_numb = i + 1  # Indeksy zaczynają się od 1
-        cont_target = cont_numb % target_mod  # Oblicz cel jako resztę z dzielenia
-        
+    unique_numbers = set()
+
+    for _ in range(n):
+        # Generate a unique number
+        while True:
+            cont_numb = random.randint(1, n + 1)  # Example range for unique numbers
+            if cont_numb not in unique_numbers:
+                unique_numbers.add(cont_numb)
+                break
+
+        # Calculate the target as a module of the unique number
+        cont_target = cont_numb % target_mod
+
+        # Add the unique dictionary to the list
         elements.append({"cont_numb": cont_numb, "cont_target": cont_target})
+
+    # elements = []
+    
+    # for i in range(n):
+    #     # Równomierne przypisanie identyfikatorów od 0 do n-1
+    #     cont_numb = i + 1  # Indeksy zaczynają się od 1
+    #     cont_target = cont_numb % target_mod  # Oblicz cel jako resztę z dzielenia
+        
+    #     elements.append({"cont_numb": cont_numb, "cont_target": cont_target})
 
     return elements
 
