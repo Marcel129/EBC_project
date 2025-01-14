@@ -274,19 +274,26 @@ class Controller:
 
                 elif target_flag == "load_transit":
                     if cart["Cart_name"] == cart_to_update["Cart_name"]:
-                        for existing_trans_point in self.transit_points:
+                        for i, existing_trans_point in enumerate(self.transit_points):
                             if (
                                 existing_trans_point["Port_ID"] == cart["Position"]
                                 and cart["Status"] == True
+                                and existing_trans_point["containersNo"]
+                                < cfg.containers_capacities[i]
                             ):
+                                time.sleep(0.5)
                                 cart["Status"] = unload  # Mark the cart as updated
                                 existing_trans_point["containersNo"] += 1
-                                time.sleep(0.5)
                                 if self.ship:
                                     cart["Target"] = PortPositions.SHIP_WAITIMG.value
                                 else:
                                     cart["Target"] = PortPositions.ST_WAITING.value
-
+                            elif (
+                                existing_trans_point["containersNo"]
+                                == cfg.containers_capacities[i]
+                            ):
+                                time.sleep(0.5)
+                                cart["Position"] = PortPositions.ST_WAITING.value
                         break  # We found and updated the cart, no need to continue looping
                 elif target_flag == "do_storage":
                     if cart["Cart_name"] == cart_to_update["Cart_name"]:
@@ -410,16 +417,22 @@ class Controller:
                             not occupied_fields[(cart["Target"] + 1)]
                             and cart["Target"] <= PortPositions.AMERICA_LP.value
                         ):
+                            time.sleep(0.5)
                             cart["Position"] = cart["Target"] + 1
                         elif not occupied_fields[PortPositions.ST_LP1.value]:
+                            time.sleep(0.5)
                             cart["Position"] = PortPositions.ST_LP1.value
                         elif not occupied_fields[PortPositions.ST_LP2.value]:
+                            time.sleep(0.5)
                             cart["Position"] = PortPositions.ST_LP2.value
                         elif not occupied_fields[PortPositions.ST_WAITING.value]:
+                            time.sleep(0.5)
                             cart["Position"] = PortPositions.ST_WAITING.value
                     elif cart["Target"] == PortPositions.SHIP_WAITIMG.value:
+                        time.sleep(0.5)
                         cart["Position"] = cart["Target"]
                 else:
+                    time.sleep(0.5)
                     cart["Position"] = cart["Target"]
 
         for cart in self.carts:
@@ -438,8 +451,10 @@ class Controller:
             ):
                 if cart["Position"] == PortPositions.ST_WAITING.value:
                     if not occupied_fields[PortPositions.ST_LP1.value]:
+                        time.sleep(0.5)
                         cart["Position"] = PortPositions.ST_LP1.value
                     elif not occupied_fields[PortPositions.ST_LP2.value]:
+                        time.sleep(0.5)
                         cart["Position"] = PortPositions.ST_LP2.value
                 if (
                     cart["Position"]
@@ -447,10 +462,13 @@ class Controller:
                     # and cart["Status"] == False
                 ):
                     if not occupied_fields[PortPositions.SHIP_LP1.value]:
+                        time.sleep(0.5)
                         cart["Position"] = PortPositions.SHIP_LP1.value
                     elif not occupied_fields[PortPositions.SHIP_LP2.value]:
+                        time.sleep(0.5)
                         cart["Position"] = PortPositions.SHIP_LP2.value
                     elif not occupied_fields[PortPositions.SHIP_LP3.value]:
+                        time.sleep(0.5)
                         cart["Position"] = PortPositions.SHIP_LP3.value
 
     def check_port_status(self):

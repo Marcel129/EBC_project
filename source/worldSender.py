@@ -67,7 +67,7 @@ class WorldSimulator:
 
         self.ship.isInPort = True
         # self.ship.remainingContainersNo = rnd.randint(0, cfg.containers_capacities[-1])
-        self.ship.remainingContainersNo = 20
+        self.ship.remainingContainersNo = 50
 
         for i in range(cfg.numberOfCarts):
             cart = port.Cart()
