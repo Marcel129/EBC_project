@@ -258,6 +258,7 @@ class Controller:
                         ]  # Set the Target from the last container's value
                         self.ship_remainingContainersNo -= 1
                         self.containers.pop()
+                        time.sleep(0.5)
                         if occupied_fields[cart["Target"]]:
                             if not occupied_fields[(cart["Target"] + 1)]:
                                 cart["Position"] = cart["Target"] + 1
@@ -280,7 +281,7 @@ class Controller:
                             ):
                                 cart["Status"] = unload  # Mark the cart as updated
                                 existing_trans_point["containersNo"] += 1
-                                print(f"Transit {existing_trans_point}")
+                                time.sleep(0.5)
                                 if self.ship:
                                     cart["Target"] = PortPositions.SHIP_WAITIMG.value
                                 else:
@@ -299,6 +300,7 @@ class Controller:
                                 "cont_target"
                             ]
                             self.storage_containers_info.pop()
+                            time.sleep(0.5)
                             cart["Status"] = unload  # Mark the cart as updated
                         elif (
                             not unload
@@ -314,6 +316,7 @@ class Controller:
                                 }
                             )
                             self.storage_containers += 1
+                            time.sleep(0.5)
                             cart["Status"] = unload  # Mark the cart as updated
                             if self.ship:
                                 cart["Target"] = PortPositions.SHIP_WAITIMG.value
