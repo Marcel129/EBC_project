@@ -13,7 +13,7 @@ from controller import PortPositions
 logging.basicConfig(level=logging.WARNING)
 
 CRANE_DELAY = 1  # seconds
-SHIP_DELAY = 20  # seconds
+SHIP_DELAY = 5  # seconds
 
 transitPointsIDs = [
     port.TransitPoint.Port_ID.AFRICA,
@@ -257,7 +257,8 @@ class WorldSimulator:
                 logging.warning(f"Empty message data for topic: {topic}")
                 return
 
-            if topic == "ship":
+            if topic == "ship" 
+            #and self.ship_message_flag == False:
                 msg = port.Ship()
                 try:
                     msg.ParseFromString(message_data)
@@ -289,8 +290,12 @@ class WorldSimulator:
                 msg = port.Crane()
                 try:
                     msg.ParseFromString(message_data)
-                    for crane in self.cranes:
-                        if crane.name == msg.name:
+                    for i, crane in enumerate(self.cranes):
+                        if (
+                            crane.name
+                            == msg.name
+                            # and self.cranes_message_flag[i] == False
+                        ):
                             crane.isReady = msg.isReady
                             logging.info(f"Updated Crane: {crane.name}")
                             self.send_ack(zmq.Poller())
@@ -686,8 +691,9 @@ class WorldSimulator:
             print(f"Ship delay: {self.ship_delay}")
             if self.ship_delay <= 0:
                 self.ship.isInPort = True
-                # self.ship.remainingContainersNo = rnd.randint(0, cfg.containers_capacities[-1])
-                self.ship.remainingContainersNo = 5
+                self.ship.remainingContainersNo = rnd.randint(
+                    20, cfg.containers_capacities[-1]
+                )
                 self.ship_message_flag = True
                 self.ship_delay = SHIP_DELAY
 

@@ -12,7 +12,7 @@ import zmq
 import zmq.asyncio
 
 # Configure logging
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.CRITICAL)
 # logging.propagate = False
 # CRANE_1 = "SHIP_C1"  # UPPER
 # CRANE_2 = "SHIP_C2"  # LOWER
@@ -242,12 +242,14 @@ class Controller:
             ]
 
             # print(f"Car to update: f{cart_to_update}")
+            # print(f"Car to update: f{cart_to_update}")
             for cart in self.carts:
                 if target_flag == "unload_ship":
                     if (
                         cart["Cart_name"] == cart_to_update["Cart_name"]
                         and (self.ship_remainingContainersNo > 0)
                         and self.containers
+                        and cart["Status"] == False
                         and unload
                     ):
                         cart["Status"] = unload  # Mark the cart as updated
@@ -256,24 +258,26 @@ class Controller:
                         ]  # Set the Target from the last container's value
                         self.ship_remainingContainersNo -= 1
                         self.containers.pop()
-                        # if occupied_fields[cart["Target"]]:
-                        #     if not occupied_fields[(cart["Target"] + 1)]:
-                        #         cart["Position"] = cart["Target"] + 1
-                        #     elif not occupied_fields[PortPositions.ST_LP1.value]:
-                        #         cart["Position"] = PortPositions.ST_LP1.value
-                        #     elif not occupied_fields[PortPositions.ST_LP2.value]:
-                        #         cart["Position"] = PortPositions.ST_LP2.value
-                        #     elif not occupied_fields[PortPositions.ST_WAITING.value]:
-                        #         cart["Position"] = PortPositions.ST_WAITING.value
-                        # else:
-                        #     cart["Position"] = cart["Target"]
-                        # break  # We found and updated the cart, no need to continue looping
+                        if occupied_fields[cart["Target"]]:
+                            if not occupied_fields[(cart["Target"] + 1)]:
+                                cart["Position"] = cart["Target"] + 1
+                            elif not occupied_fields[PortPositions.ST_LP1.value]:
+                                cart["Position"] = PortPositions.ST_LP1.value
+                            elif not occupied_fields[PortPositions.ST_LP2.value]:
+                                cart["Position"] = PortPositions.ST_LP2.value
+                            elif not occupied_fields[PortPositions.ST_WAITING.value]:
+                                cart["Position"] = PortPositions.ST_WAITING.value
+                        else:
+                            cart["Position"] = cart["Target"]
+                        break  # We found and updated the cart, no need to continue looping
 
                 elif target_flag == "load_transit":
                     if cart["Cart_name"] == cart_to_update["Cart_name"]:
                         for existing_trans_point in self.transit_points:
-                            if existing_trans_point["Port_ID"] == cart["Position"]:
-                                # print(f"Port id: {existing_trans_point['Port_ID']} cart position {cart['Position']}")
+                            if (
+                                existing_trans_point["Port_ID"] == cart["Position"]
+                                and cart["Status"] == True
+                            ):
                                 cart["Status"] = unload  # Mark the cart as updated
                                 existing_trans_point["containersNo"] += 1
                                 print(f"Transit {existing_trans_point}")
@@ -285,23 +289,32 @@ class Controller:
                         break  # We found and updated the cart, no need to continue looping
                 elif target_flag == "do_storage":
                     if cart["Cart_name"] == cart_to_update["Cart_name"]:
-                        cart["Status"] = unload  # Mark the cart as updated
-                        if unload == True and (self.storage_containers > 0):
+                        if (
+                            unload == True
+                            and (self.storage_containers > 0)
+                            and cart["Status"] == False
+                        ):
                             self.storage_containers -= 1
                             cart["Target"] = self.storage_containers_info[-1][
                                 "cont_target"
                             ]
                             self.storage_containers_info.pop()
-                        elif not unload and (
-                            self.storage_containers < cfg.containers_capacities[-2]
+                            cart["Status"] = unload  # Mark the cart as updated
+                        elif (
+                            not unload
+                            and (
+                                self.storage_containers < cfg.containers_capacities[-2]
+                            )
+                            and cart["Status"] == True
                         ):
                             self.storage_containers_info.append(
                                 {
                                     "cont_numb": 0,
-                                    "cont_target": cart["Target"],
+                                    "cont_target": cart_to_update["Target"],
                                 }
                             )
                             self.storage_containers += 1
+                            cart["Status"] = unload  # Mark the cart as updated
                             if self.ship:
                                 cart["Target"] = PortPositions.SHIP_WAITIMG.value
                             else:
@@ -820,11 +833,12 @@ class Controller:
         """
         Generate and send a Ship message.
         """
-        ship = port.Ship()
-        ship.isInPort = self.ship
-        ship.remainingContainersNo = self.ship_remainingContainersNo
+        if self.ship_remainingContainersNo == 0:
+            ship = port.Ship()
+            ship.isInPort = self.ship
+            ship.remainingContainersNo = self.ship_remainingContainersNo
 
-        self.send_with_ack(ship.SerializeToString(), "ship", self.ship_message_flag)
+            self.send_with_ack(ship.SerializeToString(), "ship", self.ship_message_flag)
 
     def generate_crane_message(self):
         """
@@ -1012,7 +1026,7 @@ class Controller:
                         )
                 else:
                     logging.warning(f"Unrecognized topic: {topic}")
-                
+
                 self.update_containers_status()
                 self.move_cart()
                 self.check_port_status()
@@ -1050,15 +1064,15 @@ def generate_unique_elements(n: int, target_mod: int = 4) -> List[Dict[str, int]
         cont_target = cont_numb % target_mod
 
         # Add the unique dictionary to the list
-        elements.append({"cont_numb": cont_numb, "cont_target": cont_target})
+        elements.append({"cont_numb": cont_numb, "cont_target": cont_target * 2})
 
     # elements = []
-    
+
     # for i in range(n):
     #     # Równomierne przypisanie identyfikatorów od 0 do n-1
     #     cont_numb = i + 1  # Indeksy zaczynają się od 1
     #     cont_target = cont_numb % target_mod  # Oblicz cel jako resztę z dzielenia
-        
+
     #     elements.append({"cont_numb": cont_numb, "cont_target": cont_target})
 
     return elements

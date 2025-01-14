@@ -12,9 +12,9 @@ message StorageYard{
 message TransitPoint{
     enum Port_ID {
         AFRICA = 0;
-        EUROPA = 1;
-        ASIA = 2;
-        AMERICA = 3;
+        EUROPA = 2;
+        ASIA = 4;
+        AMERICA = 6;
     }
 
     optional Port_ID ID = 1;
