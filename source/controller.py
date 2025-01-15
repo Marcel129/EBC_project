@@ -12,7 +12,7 @@ import zmq
 import zmq.asyncio
 
 # Configure logging
-logging.basicConfig(level=logging.CRITICAL)
+logging.basicConfig(level=logging.INFO)
 # logging.propagate = False
 # CRANE_1 = "SHIP_C1"  # UPPER
 # CRANE_2 = "SHIP_C2"  # LOWER
@@ -108,6 +108,8 @@ class Controller:
         self.cranes_message_flag = [False for __ in range(cfg.numberOfCranes)]
         self.transit_point_flag = [False for __ in range(4)]
         self.storage_yard_flag = False
+
+        self.poller = zmq.Poller()  # Create a poller
 
     def recieved_ship_status(self, msg):
 
@@ -334,7 +336,6 @@ class Controller:
     def update_containers_status(self):
 
         if len(self.cranes) == cfg.numberOfCranes:
-
             crane_ports = {
                 "CRANE_1": 0,
                 "CRANE_2": 0,
@@ -349,7 +350,6 @@ class Controller:
                     crane_name = existing_crane["Crane_name"]
                     if crane_name in crane_ports:
                         crane_ports[crane_name] = 1
-
             unload_ship = "unload_ship"
             load_transit = "load_transit"
             do_storage = "do_storage"
@@ -366,7 +366,6 @@ class Controller:
                     unload_ship,
                 )
             if crane_ports["CRANE_3"]:
-                # print("Crane 3____________________")
                 self.move_container(
                     {PortPositions.AFRICA_LP.value, PortPositions.EUROPA_LP.value},
                     False,
@@ -384,18 +383,18 @@ class Controller:
                     False,
                     load_transit,
                 )
-            if crane_ports["CRANE_6"] and self.ship:
+            if crane_ports["CRANE_6"]:
                 self.move_container(
                     {PortPositions.ST_LP1.value, PortPositions.ST_LP2.value},
                     False,
                     do_storage,
                 )
-            elif crane_ports["CRANE_6"] and (not self.ship):
-                self.move_container(
-                    {PortPositions.ST_LP1.value, PortPositions.ST_LP2.value},
-                    True,
-                    do_storage,
-                )
+            # elif crane_ports["CRANE_6"] and (not self.ship):
+            #     self.move_container(
+            #         {PortPositions.ST_LP1.value, PortPositions.ST_LP2.value},
+            #         True,
+            #         do_storage,
+            # )
 
     def move_cart(self):
 
@@ -419,10 +418,16 @@ class Controller:
                         ):
                             time.sleep(0.5)
                             cart["Position"] = cart["Target"] + 1
-                        elif not occupied_fields[PortPositions.ST_LP1.value]:
+                        elif (
+                            not occupied_fields[PortPositions.ST_LP1.value]
+                            # and self.cranes_message_flag[-1] == False
+                        ):
                             time.sleep(0.5)
                             cart["Position"] = PortPositions.ST_LP1.value
-                        elif not occupied_fields[PortPositions.ST_LP2.value]:
+                        elif (
+                            not occupied_fields[PortPositions.ST_LP2.value]
+                            # and self.cranes_message_flag[-1] == False
+                        ):
                             time.sleep(0.5)
                             cart["Position"] = PortPositions.ST_LP2.value
                         elif not occupied_fields[PortPositions.ST_WAITING.value]:
@@ -434,6 +439,62 @@ class Controller:
                 else:
                     time.sleep(0.5)
                     cart["Position"] = cart["Target"]
+
+        time.sleep(0.5)
+
+        for cart in self.carts:
+
+            occupied_fields = [
+                (
+                    1
+                    if any(cart["Position"] == position.value for cart in self.carts)
+                    else 0
+                )
+                for position in PortPositions
+            ]
+            if (
+                (
+                    cart["Target"] == PortPositions.AFRICA_LP.value
+                    and self.transit_points[0]["containersNo"]
+                    == cfg.containers_capacities[0]
+                    and cart["Status"] == True
+                )
+                or (
+                    cart["Target"] == PortPositions.EUROPA_LP.value
+                    and self.transit_points[1]["containersNo"]
+                    == cfg.containers_capacities[1]
+                    and cart["Status"] == True
+                )
+                or (
+                    cart["Target"] == PortPositions.ASIA_LP.value
+                    and self.transit_points[2]["containersNo"]
+                    == cfg.containers_capacities[2]
+                    and cart["Status"] == True
+                )
+                or (
+                    cart["Target"] == PortPositions.AMERICA_LP.value
+                    and self.transit_points[3]["containersNo"]
+                    == cfg.containers_capacities[3]
+                    and cart["Status"] == True
+                )
+            ):
+                if (
+                    not occupied_fields[PortPositions.ST_LP1.value]
+                    # and self.cranes_message_flag[-1] == False
+                ):
+                    time.sleep(0.5)
+                    cart["Position"] = PortPositions.ST_LP1.value
+                elif (
+                    not occupied_fields[PortPositions.ST_LP2.value]
+                    # and self.cranes_message_flag[-1] == False
+                ):
+                    time.sleep(0.5)
+                    cart["Position"] = PortPositions.ST_LP2.value
+                else:
+                    time.sleep(0.5)
+                    cart["Position"] = PortPositions.ST_WAITING.value
+
+        time.sleep(0.5)
 
         for cart in self.carts:
 
@@ -450,10 +511,16 @@ class Controller:
                 or cart["Position"] == PortPositions.SHIP_WAITIMG.value
             ):
                 if cart["Position"] == PortPositions.ST_WAITING.value:
-                    if not occupied_fields[PortPositions.ST_LP1.value]:
+                    if (
+                        not occupied_fields[PortPositions.ST_LP1.value]
+                        # and self.cranes_message_flag[-1] == False
+                    ):
                         time.sleep(0.5)
                         cart["Position"] = PortPositions.ST_LP1.value
-                    elif not occupied_fields[PortPositions.ST_LP2.value]:
+                    elif (
+                        not occupied_fields[PortPositions.ST_LP2.value]
+                        # and self.cranes_message_flag[-1] == False
+                    ):
                         time.sleep(0.5)
                         cart["Position"] = PortPositions.ST_LP2.value
                 if (
@@ -461,13 +528,25 @@ class Controller:
                     == PortPositions.SHIP_WAITIMG.value
                     # and cart["Status"] == False
                 ):
-                    if not occupied_fields[PortPositions.SHIP_LP1.value]:
+                    if (
+                        not occupied_fields[PortPositions.SHIP_LP1.value]
+                        # and self.cranes_message_flag[0] == False
+                    ):
                         time.sleep(0.5)
                         cart["Position"] = PortPositions.SHIP_LP1.value
-                    elif not occupied_fields[PortPositions.SHIP_LP2.value]:
+                    elif (
+                        not occupied_fields[PortPositions.SHIP_LP2.value]
+                        # and (
+                        #     self.cranes_message_flag[0] == False
+                        #     or self.cranes_message_flag[1] == False
+                        # )
+                    ):
                         time.sleep(0.5)
                         cart["Position"] = PortPositions.SHIP_LP2.value
-                    elif not occupied_fields[PortPositions.SHIP_LP3.value]:
+                    elif (
+                        not occupied_fields[PortPositions.SHIP_LP3.value]
+                        # and self.cranes_message_flag[1] == False
+                    ):
                         time.sleep(0.5)
                         cart["Position"] = PortPositions.SHIP_LP3.value
 
@@ -495,13 +574,15 @@ class Controller:
                     :
                 ]:  # Iterate over a copy of the list to safely modify `tmp`
                     if cart["Position"] == PortPositions.SHIP_LP1.value:
-                        existing_crane["Status"] = False
+                        time.sleep(0.5)
+                        # existing_crane["Status"] = False
                         tmp.remove(cart)  # Remove the cart from tmp
-                        self.cranes_message_flag[0] = True
+                        # self.cranes_message_flag[0] = True
                     elif cart["Position"] == PortPositions.SHIP_LP2.value:
-                        existing_crane["Status"] = False
+                        time.sleep(0.5)
+                        # existing_crane["Status"] = False
                         tmp.remove(cart)  # Remove the cart from tmp
-                        self.cranes_message_flag[0] = True
+                        # self.cranes_message_flag[0] = True
             elif (
                 existing_crane["Crane_name"] == CRANE_2
                 and existing_crane["Status"] == True
@@ -511,13 +592,15 @@ class Controller:
                     :
                 ]:  # Iterate over a copy of the list to safely modify `tmp`
                     if cart["Position"] == PortPositions.SHIP_LP2.value:
-                        existing_crane["Status"] = False
+                        time.sleep(0.5)
+                        # existing_crane["Status"] = False
                         tmp.remove(cart)  # Remove the cart from tmp
-                        self.cranes_message_flag[1] = True
+                        # self.cranes_message_flag[1] = True
                     elif cart["Position"] == PortPositions.SHIP_LP3.value:
-                        existing_crane["Status"] = False
+                        time.sleep(0.5)
+                        # existing_crane["Status"] = False
                         tmp.remove(cart)  # Remove the cart from tmp
-                        self.cranes_message_flag[1] = True
+                        # self.cranes_message_flag[1] = True
             elif (
                 existing_crane["Crane_name"] == CRANE_3
                 and existing_crane["Status"] == True
@@ -527,13 +610,15 @@ class Controller:
                     :
                 ]:  # Iterate over a copy of the list to safely modify `tmp`
                     if cart["Position"] == PortPositions.AFRICA_LP.value:
-                        existing_crane["Status"] = False
+                        time.sleep(0.5)
+                        # existing_crane["Status"] = False
                         tmp.remove(cart)  # Remove the cart from tmp
-                        self.cranes_message_flag[2] = True
+                        # self.cranes_message_flag[2] = True
                     elif cart["Position"] == PortPositions.EUROPA_LP.value:
-                        existing_crane["Status"] = False
+                        time.sleep(0.5)
+                        # existing_crane["Status"] = False
                         tmp.remove(cart)  # Remove the cart from tmp
-                        self.cranes_message_flag[2] = True
+                        # self.cranes_message_flag[2] = True
             elif (
                 existing_crane["Crane_name"] == CRANE_4
                 and existing_crane["Status"] == True
@@ -543,13 +628,15 @@ class Controller:
                     :
                 ]:  # Iterate over a copy of the list to safely modify `tmp`
                     if cart["Position"] == PortPositions.EUROPA_LP.value:
-                        existing_crane["Status"] = False
+                        time.sleep(0.5)
+                        # existing_crane["Status"] = False
                         tmp.remove(cart)  # Remove the cart from tmp
-                        self.cranes_message_flag[3] = True
+                        # self.cranes_message_flag[3] = True
                     elif cart["Position"] == PortPositions.AMERICA_LP.value:
-                        existing_crane["Status"] = False
+                        time.sleep(0.5)
+                        # existing_crane["Status"] = False
                         tmp.remove(cart)  # Remove the cart from tmp
-                        self.cranes_message_flag[3] = True
+                        # self.cranes_message_flag[3] = True
             elif (
                 existing_crane["Crane_name"] == CRANE_5
                 and existing_crane["Status"] == True
@@ -559,13 +646,15 @@ class Controller:
                     :
                 ]:  # Iterate over a copy of the list to safely modify `tmp`
                     if cart["Position"] == PortPositions.AMERICA_LP.value:
-                        existing_crane["Status"] = False
+                        time.sleep(0.5)
+                        # existing_crane["Status"] = False
                         tmp.remove(cart)  # Remove the cart from tmp
-                        self.cranes_message_flag[-2] = True
+                        # self.cranes_message_flag[-2] = True
                     elif cart["Position"] == PortPositions.ASIA_LP.value:
-                        existing_crane["Status"] = False
+                        time.sleep(0.5)
+                        # existing_crane["Status"] = False
                         tmp.remove(cart)  # Remove the cart from tmp
-                        self.cranes_message_flag[-2] = True
+                        # self.cranes_message_flag[-2] = True
             elif (
                 existing_crane["Crane_name"] == CRANE_6
                 and existing_crane["Status"] == True
@@ -575,13 +664,15 @@ class Controller:
                     :
                 ]:  # Iterate over a copy of the list to safely modify `tmp`
                     if cart["Position"] == PortPositions.ST_LP1.value:
-                        existing_crane["Status"] = False
+                        time.sleep(0.5)
+                        # existing_crane["Status"] = False
                         tmp.remove(cart)  # Remove the cart from tmp
-                        self.cranes_message_flag[-1] = True
+                        # self.cranes_message_flag[-1] = True
                     elif cart["Position"] == PortPositions.ST_LP2.value:
+                        time.sleep(0.5)
                         existing_crane["Status"] = False
                         tmp.remove(cart)  # Remove the cart from tmp
-                        self.cranes_message_flag[-1] = True
+                        # self.cranes_message_flag[-1] = True
 
         self.generate_messages()
 
@@ -632,198 +723,7 @@ class Controller:
         new_transit.containersNo = transit_data["containersNo"]
         logging.info(f"Added new transit {transit_data['Port_ID']} to PortState.")
 
-    # def generate_ship_message(self):
-    #     """
-    #     Generate and send a Ship message.
-    #     """
-    #     ship = port.Ship()
-    #     ship.isInPort = self.ship
-    #     ship.remainingContainersNo = self.ship_remainingContainersNo
-
-    #     # Send the serialized message with the topic
-    #     topic = "ship"
-    #     # Send topic and message as a multipart message
-    #     self.sender.send_multipart([topic.encode(), ship.SerializeToString()])
-    #     logging.info(f"Sent Ship message: {ship}")
-
-    #     # # Wait for acknowledgment
-    #     # self.ack_receiver.send_string("ACK_REQUEST")
-    #     # ack = self.ack_receiver.recv_string()
-    #     # if ack == "ACK":
-    #     #     self.ship_message_flag = False
-    #     #     print(f"ACK received for")
-
-    #     # Poller for acknowledgment
-    #     poller = zmq.Poller()
-    #     poller.register(self.ack_receiver, zmq.POLLIN)
-
-    #     # Send ACK_REQUEST if the socket is ready for sending
-    #     if self.ack_receiver.getsockopt(zmq.EVENTS) & zmq.POLLOUT:
-    #         self.ack_receiver.send_string("ACK_REQUEST")
-
-    #     # Poll for acknowledgment
-    #     if poller.poll(1000):  # Timeout in milliseconds
-    #         ack = self.ack_receiver.recv_string()
-    #         if ack == "ACK":
-    #             self.ship_message_flag = False
-    #             logging.info("ACK received for Ship")
-    #     else:
-    #         logging.warning("ACK timeout for Ship")
-
-    # def generate_crane_message(self):
-    #     """
-    #     Generate and send a Crane message.
-    #     """
-    #     for i, existing_crane in enumerate(self.cranes):
-    #         if self.cranes_message_flag[i] == True:
-    #             print(existing_crane)
-    #             crane = port.Crane()
-    #             crane.name = existing_crane["Crane_name"]
-    #             crane.isReady = existing_crane["Status"]
-    #             topic = "crane"
-    #             self.sender.send_multipart([topic.encode(), crane.SerializeToString()])
-    #             logging.info(f"Sent Crane message: {crane}")
-
-    #             # # Wait for acknowledgment
-    #             # self.ack_receiver.send_string("ACK_REQUEST")
-    #             # ack = self.ack_receiver.recv_string()
-    #             # if ack == "ACK":
-    #             #     self.cranes_message_flag[i] = False
-    #             #     print(f"ACK received for")
-
-    #             # Poller for acknowledgment
-    #             poller = zmq.Poller()
-    #             poller.register(self.ack_receiver, zmq.POLLIN)
-
-    #             # Send ACK_REQUEST if the socket is ready for sending
-    #             if self.ack_receiver.getsockopt(zmq.EVENTS) & zmq.POLLOUT:
-    #                 self.ack_receiver.send_string("ACK_REQUEST")
-
-    #             # Poll for acknowledgment
-    #             if poller.poll(1000):  # Timeout in milliseconds
-    #                 ack = self.ack_receiver.recv_string()
-    #                 if ack == "ACK":
-    #                     self.cranes_message_flag[i] = False
-    #                     logging.info(f"ACK received for Crane {crane}")
-    #             else:
-    #                 logging.warning(f"ACK timeout for Crane {crane}")
-
-    # def generate_cart_message(self):
-    #     """
-    #     Generate and send a Cart message.
-    #     """
-
-    #     for i, existing_cart in enumerate(self.myPort.carts):
-    #         if self.carts_message_flag[i] == True:
-    #             cart = port.Cart()
-    #             cart.name = existing_cart["Cart_name"]
-    #             cart.withContainer = existing_cart["Status"]
-    #             cart.cartPos = existing_cart.cartPos["Position"]
-    #             cart.targetID = existing_cart.targetID["Target"]
-    #             # self.sender.send(cart.SerializeToString())
-    #             topic = "cart"
-    #             self.sender.send_multipart([topic.encode(), cart.SerializeToString()])
-    #             logging.info(f"Sent Cart message: {cart}")
-
-    #             # # Wait for acknowledgment
-    #             # self.ack_receiver.send_string("ACK_REQUEST")
-    #             # ack = self.ack_receiver.recv_string()
-    #             # if ack == "ACK":
-    #             #     self.carts_message_flag[i] = False
-    #             #     print(f"ACK received for")
-
-    #             # Poller for acknowledgment
-    #             poller = zmq.Poller()
-    #             poller.register(self.ack_receiver, zmq.POLLIN)
-
-    #             # Send ACK_REQUEST if the socket is ready for sending
-    #             if self.ack_receiver.getsockopt(zmq.EVENTS) & zmq.POLLOUT:
-    #                 self.ack_receiver.send_string("ACK_REQUEST")
-
-    #             # Poll for acknowledgment
-    #             if poller.poll(1000):  # Timeout in milliseconds
-    #                 ack = self.ack_receiver.recv_string()
-    #                 if ack == "ACK":
-    #                     self.carts_message_flag[i] = False
-    #                     logging.info(f"ACK received for Cart {cart}")
-    #             else:
-    #                 logging.warning(f"ACK timeout for Cart {cart}")
-
-    # def generate_transit_point_message(self):
-    #     """
-    #     Generate and send a TransitPoint message.
-    #     """
-    #     for i, existing_trans_point in enumerate(self.transit_points):
-    #         if self.transit_point_flag[i] == True:
-    #             transit_point = port.TransitPoint()
-    #             transit_point.ID = existing_trans_point["Port_ID"]
-    #             transit_point.containersNo = existing_trans_point["containersNo"]
-    #             topic = "transit_point"
-    #             self.sender.send_multipart(
-    #                 [topic.encode(), transit_point.SerializeToString()]
-    #             )
-    #             logging.info(f"Sent TransitPoint message: {transit_point}")
-
-    #             # # Wait for acknowledgment
-    #             # self.ack_receiver.send_string("ACK_REQUEST")
-    #             # ack = self.ack_receiver.recv_string()
-    #             # if ack == "ACK":
-    #             #     self.transit_point_flag[i] = False
-    #             #     print(f"ACK received for")
-
-    #             # Poller for acknowledgment
-    #             poller = zmq.Poller()
-    #             poller.register(self.ack_receiver, zmq.POLLIN)
-
-    #             # Send ACK_REQUEST if the socket is ready for sending
-    #             if self.ack_receiver.getsockopt(zmq.EVENTS) & zmq.POLLOUT:
-    #                 self.ack_receiver.send_string("ACK_REQUEST")
-
-    #             # Poll for acknowledgment
-    #             if poller.poll(1000):  # Timeout in milliseconds
-    #                 ack = self.ack_receiver.recv_string()
-    #                 if ack == "ACK":
-    #                     self.transit_point_flag[i] = False
-    #                     logging.info(f"ACK received for TransitPoint {transit_point}")
-    #             else:
-    #                 logging.warning(f"ACK timeout for TransitPoint {transit_point}")
-
-    # def generate_storage_yard_message(self):
-    #     """
-    #     Generate and send a StorageYard message.
-    #     """
-    #     storage_yard = port.StorageYard()
-    #     storage_yard.containersNo = self.storage_containers
-    #     # self.sender.send(storage_yard.SerializeToString())
-    #     topic = "storage_yard"
-    #     self.sender.send_multipart([topic.encode(), storage_yard.SerializeToString()])
-    #     logging.info(f"Sent StorageYard message: {storage_yard}")
-
-    #     # # Wait for acknowledgment
-    #     # self.ack_receiver.send_string("ACK_REQUEST")
-    #     # ack = self.ack_receiver.recv_string()
-    #     # if ack == "ACK":
-    #     #     self.storage_yard_flag = False
-    #     #     print(f"ACK received for")
-
-    #     # Poller for acknowledgment
-    #     poller = zmq.Poller()
-    #     poller.register(self.ack_receiver, zmq.POLLIN)
-
-    #     # Send ACK_REQUEST if the socket is ready for sending
-    #     if self.ack_receiver.getsockopt(zmq.EVENTS) & zmq.POLLOUT:
-    #         self.ack_receiver.send_string("ACK_REQUEST")
-
-    #     # Poll for acknowledgment
-    #     if poller.poll(1000):  # Timeout in milliseconds
-    #         ack = self.ack_receiver.recv_string()
-    #         if ack == "ACK":
-    #             self.storage_yard_flag = False
-    #             logging.info("ACK received for StorageYard")
-    #     else:
-    #         logging.warning("ACK timeout for StorageYard")
-
-    def send_with_ack(self, message, topic, flag_variable, timeout=100):
+    def send_with_ack(self, message, topic, flag_variable, timeout=1000):
         """
         Helper function to send a message with acknowledgment.
         """
@@ -948,7 +848,7 @@ class Controller:
             self.sender.send_multipart(
                 [topic.encode(), self.myPort.SerializeToString()]
             )
-            logging.info(f"PortState sent: {self.myPort}")
+            # logging.info(f"PortState sent: {self.myPort}")
             time.sleep(1)
 
     def main_loop(self):
@@ -956,111 +856,150 @@ class Controller:
         Main loop to process incoming messages of various types.
         Continuously listens for messages and processes them based on their expected type.
         """
+
+        # Register the receiver socket with the poller for POLLIN event
+        self.poller.register(self.receiver, zmq.POLLIN)
+
         while self.running:
             try:
 
-                raw_message = self.receiver.recv_multipart()
-                # Topic to pierwszy element wiadomości
-                topic = raw_message[0].decode()  # Decode topic
-                # Message data to drugi element wiadomości
-                message_data = raw_message[1]
-                # Ensure message data is not empty before attempting to parse
-                if not message_data:
-                    logging.warning(f"Empty message data for topic: {topic}")
-                    continue  # Skip processing this message
-                # Process based on topic
-                if topic == "ship":
-                    msg = port.Ship()
-                    try:
-                        msg.ParseFromString(message_data)
-                        logging.info("Received Ship message.")
-                        print(msg)
-                        self.recieved_ship_status(msg)
-                        ack_request = self.ack_socket.recv_string()
-                        if ack_request == "ACK_REQUEST":
-                            self.ack_socket.send_string("ACK")
-                            print("ACK sent.")
-                    except Exception as e:
-                        logging.error(
-                            f"Error processing Ship message: {e}, topic: {topic}"
-                        )
-                elif topic == "cart":
-                    msg = port.Cart()
-                    try:
-                        msg.ParseFromString(message_data)
-                        logging.info("Received Cart message.")
-                        print(msg)
-                        self.recieved_cart_status(msg)
-                        ack_request = self.ack_socket.recv_string()
-                        if ack_request == "ACK_REQUEST":
-                            self.ack_socket.send_string("ACK")
-                            print("ACK sent.")
-                    except Exception as e:
-                        logging.error(
-                            f"Error processing Cart message: {e}, topic: {topic}"
-                        )
-                elif topic == "crane":
-                    msg = port.Crane()
-                    try:
-                        msg.ParseFromString(message_data)
-                        logging.info("Received Crane message.")
-                        print(msg)
-                        self.recieved_crane_status(msg)
-                        ack_request = self.ack_socket.recv_string()
-                        if ack_request == "ACK_REQUEST":
-                            self.ack_socket.send_string("ACK")
-                            print("ACK sent.")
-                    except Exception as e:
-                        logging.error(
-                            f"Error processing Crane message: {e}, topic: {topic}"
-                        )
-                elif topic == "storage_yard":
-                    msg = port.StorageYard()
-                    try:
-                        msg.ParseFromString(message_data)
-                        logging.info("Received StorageYard message.")
-                        print(msg)
-                        self.recieved_storage_yard_status(msg)
-                        ack_request = self.ack_socket.recv_string()
-                        if ack_request == "ACK_REQUEST":
-                            self.ack_socket.send_string("ACK")
-                            print("ACK sent.")
-                    except Exception as e:
-                        logging.error(
-                            f"Error processing StorageYard message: {e}, topic: {topic}"
-                        )
-                elif topic == "transit_point":
-                    msg = port.TransitPoint()
-                    try:
-                        msg.ParseFromString(message_data)
-                        logging.info("Received TransitPoint message.")
-                        print(msg)
-                        self.recieved_transit_point_status(msg)
-                        ack_request = self.ack_socket.recv_string()
-                        if ack_request == "ACK_REQUEST":
-                            self.ack_socket.send_string("ACK")
-                            print("ACK sent.")
+                # Poll the socket for events with a timeout (in milliseconds)
+                socks = dict(
+                    self.poller.poll(timeout=100)
+                )  # This will return {socket: event}
 
-                    except Exception as e:
-                        logging.error(
-                            f"Error processing TransitPoint message: {e}, topic: {topic}"
-                        )
-                else:
-                    logging.warning(f"Unrecognized topic: {topic}")
+                if self.receiver in socks and socks[self.receiver] == zmq.POLLIN:
+                    raw_message = self.receiver.recv_multipart()
+                    if not raw_message:
+                        # If no message received within the timeout, continue the loop
+                        break
+                    # Topic to pierwszy element wiadomości
+                    topic = raw_message[0].decode()  # Decode topic
+                    # Message data to drugi element wiadomości
+                    message_data = raw_message[1]
+                    # Ensure message data is not empty before attempting to parse
+                    if not message_data:
+                        logging.warning(f"Empty message data for topic: {topic}")
+                        continue  # Skip processing this message
+                    # Process based on topic
+                    if topic == "ship":
+                        msg = port.Ship()
+                        try:
+                            msg.ParseFromString(message_data)
+                            logging.info("Received Ship message.")
+                            print(msg)
+                            self.recieved_ship_status(msg)
+                            ack_request = self.ack_socket.recv_string()
+                            if ack_request == "ACK_REQUEST":
+                                self.ack_socket.send_string("ACK")
+                                print("ACK sent.")
+                        except Exception as e:
+                            logging.error(
+                                f"Error processing Ship message: {e}, topic: {topic}"
+                            )
+                    elif topic == "cart":
+                        msg = port.Cart()
+                        try:
+                            msg.ParseFromString(message_data)
+                            logging.info("Received Cart message.")
+                            print(msg)
+                            self.recieved_cart_status(msg)
+                            ack_request = self.ack_socket.recv_string()
+                            if ack_request == "ACK_REQUEST":
+                                self.ack_socket.send_string("ACK")
+                                print("ACK sent.")
+                        except Exception as e:
+                            logging.error(
+                                f"Error processing Cart message: {e}, topic: {topic}"
+                            )
+                    elif topic == "crane":
+                        msg = port.Crane()
+                        try:
+                            msg.ParseFromString(message_data)
+                            logging.info("Received Crane message.")
+                            print(msg)
+                            self.recieved_crane_status(msg)
+                            ack_request = self.ack_socket.recv_string()
+                            if ack_request == "ACK_REQUEST":
+                                self.ack_socket.send_string("ACK")
+                                print("ACK sent.")
+                        except Exception as e:
+                            logging.error(
+                                f"Error processing Crane message: {e}, topic: {topic}"
+                            )
+                    elif topic == "storage_yard":
+                        msg = port.StorageYard()
+                        try:
+                            msg.ParseFromString(message_data)
+                            logging.info("Received StorageYard message.")
+                            print(msg)
+                            self.recieved_storage_yard_status(msg)
+                            ack_request = self.ack_socket.recv_string()
+                            if ack_request == "ACK_REQUEST":
+                                self.ack_socket.send_string("ACK")
+                                print("ACK sent.")
+                        except Exception as e:
+                            logging.error(
+                                f"Error processing StorageYard message: {e}, topic: {topic}"
+                            )
+                    elif topic == "transit_point":
+                        msg = port.TransitPoint()
+                        try:
+                            msg.ParseFromString(message_data)
+                            logging.info("Received TransitPoint message.")
+                            print(msg)
+                            self.recieved_transit_point_status(msg)
+                            ack_request = self.ack_socket.recv_string()
+                            if ack_request == "ACK_REQUEST":
+                                self.ack_socket.send_string("ACK")
+                                print("ACK sent.")
 
+                        except Exception as e:
+                            logging.error(
+                                f"Error processing TransitPoint message: {e}, topic: {topic}"
+                            )
+                    else:
+                        logging.warning(f"Unrecognized topic: {topic}")
+
+            except Exception as e:
+                logging.error(f"Error processing message: {e}", exc_info=True)
+
+    def check_conditions_and_update(self):
+        """This method will run in a separate thread to check conditions and perform updates."""
+        while self.running:
+            if (
+                len(self.carts) == cfg.numberOfCarts
+                and len(self.cranes) == cfg.numberOfCranes
+                and len(self.transit_points) == 4
+            ):
                 self.update_containers_status()
                 self.move_cart()
                 self.check_port_status()
-            except Exception as e:
-                logging.error(f"Error processing message: {e}", exc_info=True)
+            else:
+                # Log the current state when conditions aren't met
+                logging.warning(
+                    f"Current carts: {len(self.carts)} / {cfg.numberOfCarts}"
+                )
+                logging.warning(
+                    f"Current cranes: {len(self.cranes)} / {cfg.numberOfCranes}"
+                )
+                logging.warning(
+                    f"Current transit points: {len(self.transit_points)} / 4"
+                )
+
+            # Sleep for a while before checking again
+            time.sleep(1)
 
     def run(self):
         gui_thread = threading.Thread(target=self.send_port_state, daemon=True)
         main_thread = threading.Thread(target=self.main_loop, daemon=True)
-
+        # Start a new thread for checking conditions and performing updates
+        update_thread = threading.Thread(
+            target=self.check_conditions_and_update, daemon=True
+        )
         gui_thread.start()
+        update_thread.start()
         main_thread.start()
-
         try:
             while self.running:
                 time.sleep(1)

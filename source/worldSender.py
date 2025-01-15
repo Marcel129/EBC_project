@@ -13,7 +13,7 @@ from controller import PortPositions
 logging.basicConfig(level=logging.WARNING)
 
 CRANE_DELAY = 1  # seconds
-SHIP_DELAY = 5  # seconds
+SHIP_DELAY = 50  # seconds
 
 transitPointsIDs = [
     port.TransitPoint.Port_ID.AFRICA,
@@ -66,8 +66,8 @@ class WorldSimulator:
     def init_world(self):
 
         self.ship.isInPort = True
-        # self.ship.remainingContainersNo = rnd.randint(0, cfg.containers_capacities[-1])
-        self.ship.remainingContainersNo = 50
+        self.ship.remainingContainersNo = rnd.randint(0, cfg.containers_capacities[-1])
+        # self.ship.remainingContainersNo = 8
 
         for i in range(cfg.numberOfCarts):
             cart = port.Cart()
@@ -93,31 +93,47 @@ class WorldSimulator:
 
         self.storage_yard.containersNo = 0
 
-    def send_ack(self, poller, timeout_ms=100):
+    def send_ack(self, poller, timeout_ms=1000):
         """
         Sends an acknowledgment request and waits for the acknowledgment.
         """
-        try:
-            # Send ACK request if the socket is ready
-            if self.ack_receiver.getsockopt(zmq.EVENTS) & zmq.POLLOUT:
-                self.ack_receiver.send_string("ACK_REQUEST")
+        # try:
+        #     # Send ACK request if the socket is ready
+        #     if self.ack_receiver.getsockopt(zmq.EVENTS) & zmq.POLLOUT:
+        #         self.ack_receiver.send_string("ACK_REQUEST")
 
-            # Poll for acknowledgment with a timeout
-            if poller.poll(timeout_ms):  # Timeout in milliseconds
+        #     # Poll for acknowledgment with a timeout
+        #     if poller.poll(timeout_ms):  # Timeout in milliseconds
+        #         ack = self.ack_receiver.recv_string()
+        #         if ack == "ACK":
+        #             return True
+        #         else:
+        #             logging.warning(f"Unexpected ACK response: {ack}")
+        #             return False
+        #     else:
+        #         logging.warning("ACK timeout.")
+        #         return False
+        # except zmq.ZMQError as e:
+        #     logging.error(f"ZMQ error during acknowledgment: {e}")
+        #     return False
+        # except Exception as e:
+        #     logging.error(f"Error sending/receiving acknowledgment: {e}")
+        #     return False
+
+        try:
+            self.ack_receiver.send_string("ACK_REQUEST")
+            socks = dict(poller.poll(timeout_ms))
+            if self.ack_receiver in socks and socks[self.ack_receiver] == zmq.POLLIN:
                 ack = self.ack_receiver.recv_string()
-                if ack == "ACK":
-                    return True
-                else:
-                    logging.warning(f"Unexpected ACK response: {ack}")
-                    return False
+                return ack == "ACK"
             else:
-                logging.warning("ACK timeout.")
+                logging.warning("ACK not received in time.")
                 return False
         except zmq.ZMQError as e:
-            logging.error(f"ZMQ error during acknowledgment: {e}")
+            logging.error(f"ZMQ error in send_ack: {e}")
             return False
         except Exception as e:
-            logging.error(f"Error sending/receiving acknowledgment: {e}")
+            logging.error(f"General error in send_ack: {e}")
             return False
 
     def generate_ship_message(self):
@@ -330,341 +346,11 @@ class WorldSimulator:
                     logging.error(f"Error processing TransitPoint message: {e}")
 
             else:
-                logging.warning(f"Unknown topic: {topic}")
+                pass
+                # logging.pass(f"Unknown topic: {topic}")
 
         except Exception as e:
             logging.error(f"Error processing message: {e}", exc_info=True)
-
-    # def generate_ship_message(self):
-    #     """
-    #     Generate and send a Ship message.
-    #     """
-    #     # Send the serialized message with the topic
-    #     topic = "ship"
-    #     # Send topic and message as a multipart message
-    #     self.publisher.send_multipart([topic.encode(), self.ship.SerializeToString()])
-    #     logging.info(f"Sent Ship message: {self.ship}")
-
-    #     # Poller for acknowledgment
-    #     poller = zmq.Poller()
-    #     poller.register(self.ack_receiver, zmq.POLLIN)
-
-    #     # Send ACK_REQUEST if the socket is ready for sending
-    #     if self.ack_receiver.getsockopt(zmq.EVENTS) & zmq.POLLOUT:
-    #         self.ack_receiver.send_string("ACK_REQUEST")
-
-    #     # Poll for acknowledgment
-    #     if poller.poll(1000):  # Timeout in milliseconds
-    #         ack = self.ack_receiver.recv_string()
-    #         if ack == "ACK":
-    #             self.ship_message_flag = False
-    #             logging.info("ACK received for Ship")
-    #     else:
-    #         logging.warning("ACK timeout for Ship")
-
-    #     # # Wait for acknowledgment
-    #     # self.ack_receiver.send_string("ACK_REQUEST")
-    #     # ack = self.ack_receiver.recv_string()
-    #     # if ack == "ACK":
-    #     #     self.ship_message_flag = False
-    #     #     print(f"ACK received for")
-
-    # def generate_crane_message(self):
-    #     """
-    #     Generate and send a Crane message.
-    #     """
-    #     # for i in range(cfg.numberOfCranes):
-    #     #     crane = port.Crane()
-    #     #     crane.name = f"CRANE_{i}"  # TODO
-    #     #     crane.isReady = True
-    #     #     topic = "crane"
-    #     #     self.publisher.send_multipart([topic.encode(), crane.SerializeToString()])
-    #     #     # self.publisher.send(crane.SerializeToString())
-    #     #     logging.info(f"Sent Crane message: {crane}")
-    #     for i, crane in enumerate(self.cranes):
-    #         if self.cranes_message_flag[i] == True:
-    #             topic = "crane"
-    #             self.publisher.send_multipart(
-    #                 [topic.encode(), crane.SerializeToString()]
-    #             )
-    #             # self.publisher.send(crane.SerializeToString())
-    #             logging.info(f"Sent Crane message: {crane}")
-
-    #             # # Wait for acknowledgment
-    #             # self.ack_receiver.send_string("ACK_REQUEST")
-    #             # ack = self.ack_receiver.recv_string()
-    #             # if ack == "ACK":
-    #             #     self.cranes_message_flag[i] = False
-    #             #     print(f"ACK received for")
-    #             # Use a separate socket to send ACK requests
-    #             # Use poller to wait for acknowledgment
-    #             poller = zmq.Poller()
-    #             poller.register(self.ack_receiver, zmq.POLLIN)
-
-    #             # Send ACK_REQUEST if the socket is ready for sending
-    #             if self.ack_receiver.getsockopt(zmq.EVENTS) & zmq.POLLOUT:
-    #                 self.ack_receiver.send_string("ACK_REQUEST")
-
-    #             # Poll for acknowledgment
-    #             if poller.poll(1000):  # Timeout in milliseconds
-    #                 ack = self.ack_receiver.recv_string()
-    #                 if ack == "ACK":
-    #                     self.cranes_message_flag[i] = False
-    #                     logging.info(f"ACK received for crane {crane}")
-    #             else:
-    #                 logging.warning(f"ACK timeout for crane {crane}")
-
-    # def generate_cart_message(self):
-    #     """
-    #     Generate and send a Cart message.
-    #     """
-    #     # for i in range(cfg.numberOfCarts):
-    #     #     cart = port.Cart()
-    #     #     cart.name = f"CART_{i}"
-    #     #     cart.withContainer = False
-    #     #     cart.cartPos = int(rnd.random() * 15)
-    #     #     cart.targetID = PortPositions.SHIP_WAITIMG.value
-    #     #     # self.publisher.send(cart.SerializeToString())
-    #     #     topic = "cart"
-    #     #     self.publisher.send_multipart([topic.encode(), cart.SerializeToString()])
-    #     #     logging.info(f"Sent Cart message: {cart}")
-
-    #     for i, cart in enumerate(self.carts):
-    #         if self.carts_message_flag[i] == True:
-    #             topic = "cart"
-    #             self.publisher.send_multipart(
-    #                 [topic.encode(), cart.SerializeToString()]
-    #             )
-    #             # self.publisher.send(crane.SerializeToString())
-    #             logging.info(f"Sent Cart message: {cart}")
-    #             # # Wait for acknowledgment
-    #             # self.ack_receiver.send_string("ACK_REQUEST")
-    #             # ack = self.ack_receiver.recv_string()
-    #             # if ack == "ACK":
-    #             #     self.carts_message_flag[i] = False
-    #             #     print(f"ACK received for")
-
-    #             # Poller for acknowledgment
-    #             poller = zmq.Poller()
-    #             poller.register(self.ack_receiver, zmq.POLLIN)
-
-    #             # Send ACK_REQUEST if the socket is ready for sending
-    #             if self.ack_receiver.getsockopt(zmq.EVENTS) & zmq.POLLOUT:
-    #                 self.ack_receiver.send_string("ACK_REQUEST")
-
-    #             # Poll for acknowledgment
-    #             if poller.poll(1000):  # Timeout in milliseconds
-    #                 ack = self.ack_receiver.recv_string()
-    #                 if ack == "ACK":
-    #                     self.carts_message_flag[i] = False
-    #                     logging.info(f"ACK received for Cart {cart}")
-    #             else:
-    #                 logging.warning(f"ACK timeout for Cart {cart}")
-
-    # def generate_transit_point_message(self):
-    #     """
-    #     Generate and send a TransitPoint message.
-    #     """
-    #     # for id in transitPointsIDs:
-    #     #     transit_point = port.TransitPoint()
-    #     #     transit_point.ID = id
-    #     #     transit_point.containersNo = 0
-    #     #     # self.publisher.send(transit_point.SerializeToString())
-    #     #     topic = "transit_point"
-    #     #     self.publisher.send_multipart([topic.encode(), transit_point.SerializeToString()])
-    #     #     logging.info(f"Sent TransitPoint message: {transit_point}")
-
-    #     for i, transit_point in enumerate(self.transit_points):
-    #         if self.transit_point_flag[i] == True:
-    #             topic = "transit_point"
-    #             self.publisher.send_multipart(
-    #                 [topic.encode(), transit_point.SerializeToString()]
-    #             )
-    #             # self.publisher.send(crane.SerializeToString())
-    #             logging.info(f"Sent TransitPoint message: {transit_point}")
-
-    #             # # Wait for acknowledgment
-    #             # self.ack_receiver.send_string("ACK_REQUEST")
-    #             # ack = self.ack_receiver.recv_string()
-    #             # if ack == "ACK":
-    #             #     self.transit_point_flag[i] = False
-    #             #     print(f"ACK received for")
-
-    #             # Poller for acknowledgment
-    #             poller = zmq.Poller()
-    #             poller.register(self.ack_receiver, zmq.POLLIN)
-
-    #             # Send ACK_REQUEST if the socket is ready for sending
-    #             if self.ack_receiver.getsockopt(zmq.EVENTS) & zmq.POLLOUT:
-    #                 self.ack_receiver.send_string("ACK_REQUEST")
-
-    #             # Poll for acknowledgment
-    #             if poller.poll(1000):  # Timeout in milliseconds
-    #                 ack = self.ack_receiver.recv_string()
-    #                 if ack == "ACK":
-    #                     self.transit_point_flag[i] = False
-    #                     logging.info(f"ACK received for TransitPoint {transit_point}")
-    #             else:
-    #                 logging.warning(f"ACK timeout for TransitPoint {transit_point}")
-
-    # def generate_storage_yard_message(self):
-    #     """
-    #     Generate and send a StorageYard message.
-    #     """
-    #     # storage_yard = port.StorageYard()
-    #     # storage_yard.containersNo = rnd.randint(0, 500)
-    #     # # self.publisher.send(storage_yard.SerializeToString())
-    #     topic = "storage_yard"
-    #     self.publisher.send_multipart(
-    #         [topic.encode(), self.storage_yard.SerializeToString()]
-    #     )
-    #     logging.info(f"Sent StorageYard message: {self.storage_yard}")
-
-    #     # # Wait for acknowledgment
-    #     # self.ack_receiver.send_string("ACK_REQUEST")
-    #     # ack = self.ack_receiver.recv_string()
-    #     # if ack == "ACK":
-    #     #     self.storage_yard_flag = False
-    #     #     print(f"ACK received for")
-
-    #     # Poller for acknowledgment
-    #     poller = zmq.Poller()
-    #     poller.register(self.ack_receiver, zmq.POLLIN)
-
-    #     # Send ACK_REQUEST if the socket is ready for sending
-    #     if self.ack_receiver.getsockopt(zmq.EVENTS) & zmq.POLLOUT:
-    #         self.ack_receiver.send_string("ACK_REQUEST")
-
-    #     # Poll for acknowledgment
-    #     if poller.poll(1000):  # Timeout in milliseconds
-    #         ack = self.ack_receiver.recv_string()
-    #         if ack == "ACK":
-    #             self.storage_yard_flag = False
-    #             logging.info("ACK received for StorageYard")
-    #     else:
-    #         logging.warning("ACK timeout for StorageYard")
-
-    # def process_message(self):
-    #     try:
-    #         raw_message = self.receiver.recv_multipart()
-    #         # Topic to pierwszy element wiadomości
-    #         topic = raw_message[0].decode()  # Decode topic
-    #         # Message data to drugi element wiadomości
-    #         message_data = raw_message[1]
-    #         # Ensure message data is not empty before attempting to parse
-    #         if not message_data:
-    #             logging.warning(f"Empty message data for topic: {topic}")
-    #         else:
-    #             # Process based on topic
-    #             if topic == "ship":
-    #                 msg = port.Ship()
-    #                 try:
-    #                     msg.ParseFromString(message_data)
-    #                     self.ship.isInPort = msg.isInPort
-    #                     self.ship.remainingContainersNo = msg.remainingContainersNo
-    #                     logging.info("Received Ship message.")
-    #                     ack_request = self.ack_socket.recv_string()
-    #                     if ack_request == "ACK_REQUEST":
-    #                         self.ack_socket.send_string("ACK")
-    #                         print("ACK sent.")
-    #                 except Exception as e:
-    #                     logging.error(
-    #                         f"Error processing Ship message: {e}, topic: {topic}"
-    #                     )
-    #             elif topic == "cart":
-    #                 msg = port.Cart()
-    #                 try:
-    #                     msg.ParseFromString(message_data)
-    #                     for cart in self.carts:
-    #                         if cart.name == msg.name:
-    #                             cart.withContainer = msg.withContainer
-    #                             cart.cartPos = msg.cartPos
-    #                             cart.targetID = msg.targetID
-    #                             logging.info(f"Updated Cart: {cart.name}")
-    #                             ack_request = self.ack_socket.recv_string()
-    #                             if ack_request == "ACK_REQUEST":
-    #                                 self.ack_socket.send_string("ACK")
-    #                                 print("ACK sent.")
-    #                             break
-    #                     else:
-    #                         logging.warning(f"Cart with name {msg.name} not found.")
-    #                 except Exception as e:
-    #                     logging.error(
-    #                         f"Error processing Cart message: {e}, topic: {topic}"
-    #                     )
-    #             elif topic == "crane":
-    #                 msg = port.Crane()
-    #                 try:
-    #                     msg.ParseFromString(message_data)
-    #                     for crane in self.cranes:
-    #                         if crane.name == msg.name:
-    #                             crane.isReady = msg.isReady
-    #                             logging.info(f"Updated Crane: {crane.name}")
-    #                             ack_request = self.ack_socket.recv_string()
-    #                             if ack_request == "ACK_REQUEST":
-    #                                 self.ack_socket.send_string("ACK")
-    #                                 print("ACK sent.")
-    #                             break
-    #                     else:
-    #                         logging.warning(f"Crane with name {msg.name} not found.")
-    #                 except Exception as e:
-    #                     logging.error(
-    #                         f"Error processing Crane message: {e}, topic: {topic}"
-    #                     )
-    #             elif topic == "storage_yard":
-    #                 msg = port.StorageYard()
-    #                 try:
-    #                     msg.ParseFromString(message_data)
-    #                     self.storage_yard.containersNo = msg.containersNo
-    #                     logging.info("Received StorageYard message.")
-    #                     ack_request = self.ack_socket.recv_string()
-    #                     if ack_request == "ACK_REQUEST":
-    #                         self.ack_socket.send_string("ACK")
-    #                         print("ACK sent.")
-    #                 except Exception as e:
-    #                     logging.error(
-    #                         f"Error processing StorageYard message: {e}, topic: {topic}"
-    #                     )
-    #             elif topic == "transit_point":
-    #                 msg = port.TransitPoint()
-    #                 try:
-    #                     msg.ParseFromString(message_data)
-    #                     for transit_point in self.transit_points:
-    #                         if transit_point.ID == msg.ID:
-    #                             transit_point.containersNo = msg.containersNo
-    #                             logging.info(f"Updated Cart: {transit_point.ID}")
-    #                             ack_request = self.ack_socket.recv_string()
-    #                             if ack_request == "ACK_REQUEST":
-    #                                 self.ack_socket.send_string("ACK")
-    #                                 print("ACK sent.")
-    #                             break
-    #                     else:
-    #                         logging.warning(f"Cart with name {msg.ID} not found.")
-    #                 except Exception as e:
-    #                     logging.error(
-    #                         f"Error processing TransitPoint message: {e}, topic: {topic}"
-    #                     )
-    #             else:
-    #                 pass
-    #     except Exception as e:
-    #         logging.error(f"Error processing message: {e}", exc_info=True)
-
-    # def generate_messages(self):
-    #     if self.ship_message_flag:
-    #         self.generate_ship_message()
-    #         self.ship_message_flag = False
-    #     if self.storage_yard_flag:
-    #         self.generate_storage_yard_message()
-    #         self.storage_yard_flag = False
-    #     if self.transit_point_flag:
-    #         self.generate_transit_point_message()
-    #         self.transit_point_flag = False
-    #     if self.carts_message_flag:
-    #         self.generate_cart_message()
-    #         self.carts_message_flag = False
-    #     if self.cranes_message_flag:
-    #         self.generate_crane_message()
-    #         self.cranes_message_flag = False
 
     def generate_messages(self):
         """
@@ -711,11 +397,12 @@ class WorldSimulator:
                     )
                     self.cranes_delays[number] = CRANE_DELAY
 
-            # while not crane.isReady:
-            #     self.cranes_delays[number] -= 1
-            #     if self.cranes_delays[number] <= 0:
-            #         crane.isReady = True
-            #         self.cranes_message_flag = True
+        return
+        # while not crane.isReady:
+        #     self.cranes_delays[number] -= 1
+        #     if self.cranes_delays[number] <= 0:
+        #         crane.isReady = True
+        #         self.cranes_message_flag = True
 
     def simulate(self):
         """
@@ -744,6 +431,7 @@ class WorldSimulator:
                 #     self.generate_crane_message()
                 #     self.cranes_message_flag = False
                 self.generate_messages()
+                time.sleep(0.5)
             except Exception as e:
                 logging.error(f"Error during simulation: {e}", exc_info=True)
 
