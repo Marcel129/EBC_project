@@ -273,8 +273,25 @@ class Controller:
                         else:
                             cart["Position"] = cart["Target"]
                         break  # We found and updated the cart, no need to continue looping
+                    elif(cart["Cart_name"] == cart_to_update["Cart_name"]
+                        and (self.ship_remainingContainersNo == 0)
+                        and not self.ship
+                        and cart["Status"] == False
+                        and unload
+                    ):
+                        cart["Target"] = PortPositions.ST_WAITING.value
+                        cart["Position"] = PortPositions.ST_WAITING.value
+                        break
 
                 elif target_flag == "load_transit":
+                    # occupied_fields = [
+                    # (
+                    #     1
+                    #     if any(cart["Position"] == position.value for cart in self.carts)
+                    #     else 0
+                    # )
+                    # for position in PortPositions
+                    # ]
                     if cart["Cart_name"] == cart_to_update["Cart_name"]:
                         for i, existing_trans_point in enumerate(self.transit_points):
                             if (
@@ -290,6 +307,7 @@ class Controller:
                                     cart["Target"] = PortPositions.SHIP_WAITIMG.value
                                 else:
                                     cart["Target"] = PortPositions.ST_WAITING.value
+                                    cart["Position"] = PortPositions.ST_WAITING.value
                             elif (
                                 existing_trans_point["containersNo"]
                                 == cfg.containers_capacities[i]
@@ -350,6 +368,7 @@ class Controller:
                     crane_name = existing_crane["Crane_name"]
                     if crane_name in crane_ports:
                         crane_ports[crane_name] = 1
+            print(f"Crane 6: {crane_ports['CRANE_6']}")
             unload_ship = "unload_ship"
             load_transit = "load_transit"
             do_storage = "do_storage"
@@ -383,18 +402,31 @@ class Controller:
                     False,
                     load_transit,
                 )
-            if crane_ports["CRANE_6"]:
+            # if crane_ports["CRANE_6"]:
+            #     self.move_container(
+            #         {PortPositions.ST_LP1.value, PortPositions.ST_LP2.value},
+            #         False,
+            #         do_storage,
+            #     )
+            # # elif crane_ports["CRANE_6"] and (not self.ship):
+            # #     self.move_container(
+            # #         {PortPositions.ST_LP1.value, PortPositions.ST_LP2.value},
+            # #         True,
+            # #         do_storage,
+            # # )
+            if crane_ports["CRANE_6"] and self.ship:
                 self.move_container(
                     {PortPositions.ST_LP1.value, PortPositions.ST_LP2.value},
                     False,
                     do_storage,
                 )
-            # elif crane_ports["CRANE_6"] and (not self.ship):
-            #     self.move_container(
-            #         {PortPositions.ST_LP1.value, PortPositions.ST_LP2.value},
-            #         True,
-            #         do_storage,
-            # )
+            elif crane_ports["CRANE_6"] and not self.ship:
+                print("ello1")
+                self.move_container(
+                    {PortPositions.ST_LP1.value, PortPositions.ST_LP2.value},
+                    True,
+                    do_storage,
+            )
 
     def move_cart(self):
 
@@ -433,6 +465,11 @@ class Controller:
                         elif not occupied_fields[PortPositions.ST_WAITING.value]:
                             time.sleep(0.5)
                             cart["Position"] = PortPositions.ST_WAITING.value
+                        elif (cart["Target"] == PortPositions.ST_WAITING.value
+                              and cart["Status"] == False and self.ship
+                        ):
+                            time.sleep(0.5)
+                            cart["Target"] = PortPositions.SHIP_WAITIMG.value
                     elif cart["Target"] == PortPositions.SHIP_WAITIMG.value:
                         time.sleep(0.5)
                         cart["Position"] = cart["Target"]
@@ -511,7 +548,9 @@ class Controller:
                 or cart["Position"] == PortPositions.SHIP_WAITIMG.value
             ):
                 if cart["Position"] == PortPositions.ST_WAITING.value:
-                    if (
+                    if (self.ship and cart["Status"] == False):
+                        cart["Target"] = PortPositions.SHIP_WAITIMG.value
+                    elif (
                         not occupied_fields[PortPositions.ST_LP1.value]
                         # and self.cranes_message_flag[-1] == False
                     ):
@@ -528,7 +567,11 @@ class Controller:
                     == PortPositions.SHIP_WAITIMG.value
                     # and cart["Status"] == False
                 ):
-                    if (
+                    if (self.storage_containers > 0 and not self.ship 
+                        and cart["Status"] == False
+                        ):
+                        cart["Target"] = PortPositions.ST_WAITING.value
+                    elif (
                         not occupied_fields[PortPositions.SHIP_LP1.value]
                         # and self.cranes_message_flag[0] == False
                     ):
@@ -549,6 +592,26 @@ class Controller:
                     ):
                         time.sleep(0.5)
                         cart["Position"] = PortPositions.SHIP_LP3.value
+            # if (cart["Position"] == cart["Target"]) and (
+            #     cart["Position"] == PortPositions.ST_LP1.value
+            #     or cart["Position"] == PortPositions.ST_LP2.value
+            #     or cart["Position"] == PortPositions.SHIP_LP1.value
+            #     or cart["Position"] == PortPositions.SHIP_LP2.value
+            #     or cart["Position"] == PortPositions.SHIP_LP3.value
+            # ):
+            #     if (cart["Position"] == PortPositions.ST_LP1.value
+            #     or cart["Position"] == PortPositions.ST_LP2.value
+            #     and self.ship
+            #     ):
+            #         print("Halo1")
+            #         cart["Target"] = PortPositions.SHIP_WAITIMG.value
+            #     elif (cart["Position"] == PortPositions.SHIP_LP1.value
+            #     or cart["Position"] == PortPositions.SHIP_LP2.value
+            #     or cart["Position"] == PortPositions.SHIP_LP3.value
+            #     and not self.ship
+            #     ):
+            #         print("Halo2")
+            #         cart["Target"] = PortPositions.ST_WAITING.value
 
     def check_port_status(self):
 
@@ -670,7 +733,7 @@ class Controller:
                         # self.cranes_message_flag[-1] = True
                     elif cart["Position"] == PortPositions.ST_LP2.value:
                         time.sleep(0.5)
-                        existing_crane["Status"] = False
+                        # existing_crane["Status"] = False
                         tmp.remove(cart)  # Remove the cart from tmp
                         # self.cranes_message_flag[-1] = True
 
@@ -745,6 +808,7 @@ class Controller:
             if ack == "ACK":
                 flag_variable = False
                 logging.info(f"ACK received for {topic}")
+                print(self.ship)
             else:
                 logging.warning(f"ACK received but not 'ACK' for {topic}")
         else:
@@ -975,6 +1039,7 @@ class Controller:
                 self.update_containers_status()
                 self.move_cart()
                 self.check_port_status()
+                print(self.ship_remainingContainersNo)
             else:
                 # Log the current state when conditions aren't met
                 logging.warning(
@@ -1022,6 +1087,7 @@ def generate_unique_elements(n: int, target_mod: int = 4) -> List[Dict[str, int]
 
         # Calculate the target as a module of the unique number
         cont_target = cont_numb % target_mod
+        # cont_target = 0
 
         # Add the unique dictionary to the list
         elements.append({"cont_numb": cont_numb, "cont_target": cont_target * 2})

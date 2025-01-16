@@ -13,7 +13,7 @@ from controller import PortPositions
 logging.basicConfig(level=logging.WARNING)
 
 CRANE_DELAY = 1  # seconds
-SHIP_DELAY = 50  # seconds
+SHIP_DELAY = 40  # seconds
 
 transitPointsIDs = [
     port.TransitPoint.Port_ID.AFRICA,
@@ -62,11 +62,13 @@ class WorldSimulator:
 
         self.ship_delay = SHIP_DELAY
         self.cranes_delays = [CRANE_DELAY for __ in range(cfg.numberOfCranes)]
+        
 
     def init_world(self):
 
         self.ship.isInPort = True
-        self.ship.remainingContainersNo = rnd.randint(0, cfg.containers_capacities[-1])
+        self.ship.remainingContainersNo = rnd.randint(20, cfg.containers_capacities[-1])
+        # self.ship.remainingContainersNo = rnd.randint(5, 15)
         # self.ship.remainingContainersNo = 8
 
         for i in range(cfg.numberOfCarts):
@@ -96,7 +98,7 @@ class WorldSimulator:
     def send_ack(self, poller, timeout_ms=1000):
         """
         Sends an acknowledgment request and waits for the acknowledgment.
-        """
+        # """
         # try:
         #     # Send ACK request if the socket is ready
         #     if self.ack_receiver.getsockopt(zmq.EVENTS) & zmq.POLLOUT:
@@ -135,6 +137,7 @@ class WorldSimulator:
         except Exception as e:
             logging.error(f"General error in send_ack: {e}")
             return False
+
 
     def generate_ship_message(self):
         """
@@ -281,7 +284,11 @@ class WorldSimulator:
                     self.ship.isInPort = msg.isInPort
                     self.ship.remainingContainersNo = msg.remainingContainersNo
                     logging.info("Received Ship message.")
-                    self.send_ack(zmq.Poller())
+                    # self.send_ack(zmq.Poller())
+                    ack_request = self.ack_socket.recv_string()
+                    if ack_request == "ACK_REQUEST":
+                        self.ack_socket.send_string("ACK")
+                        print("ACK sent.")
                 except Exception as e:
                     logging.error(f"Error processing Ship message: {e}")
 
@@ -352,6 +359,9 @@ class WorldSimulator:
         except Exception as e:
             logging.error(f"Error processing message: {e}", exc_info=True)
 
+
+  
+
     def generate_messages(self):
         """
         Generate and send messages for various topics, ensuring acknowledgment before resetting flags.
@@ -380,6 +390,9 @@ class WorldSimulator:
                 self.ship.remainingContainersNo = rnd.randint(
                     20, cfg.containers_capacities[-1]
                 )
+                # self.ship.remainingContainersNo = rnd.randint(
+                #     10, 30
+                # )
                 self.ship_message_flag = True
                 self.ship_delay = SHIP_DELAY
 
