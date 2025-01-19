@@ -8,6 +8,10 @@ dpg.create_context()
 cart_xpos = [125, 125, 125, 125, 1000]
 cart_ypos = [300, 470, 640, 810, 690]
 
+# polozenia indykatorow
+ind_xpos = [125, 125, 125, 125, 1000, 1800]
+ind_ypos = [300, 470, 640, 810, 690, 520]
+
 cart_pos = {
     port.Cart.CartPosition.AFRICA_LP: [425, 285],
     port.Cart.CartPosition.AFRICA_WAITING: [540, 335],
@@ -144,10 +148,6 @@ with dpg.window(
         tag=f"{cfg.containers[5]}_image",
         pos=[1800, 100],
     )
-
-    # polozenia indykatorow
-    ind_xpos = [125, 125, 125, 125, 1000, 1900]
-    ind_ypos = [300, 470, 640, 810, 690, 520]
 
     for i in range(len(cfg.containers)):
         dpg.add_progress_bar(
